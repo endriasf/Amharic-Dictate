@@ -5,7 +5,7 @@ Downloads a model from Hugging Face (or copies a local folder), stores its weigh
 (about half the size, no meaningful accuracy change — the app converts back to full precision when
 loading), and stamps the author and licence into the weights file and config.json.
 
-  python tools/prepare_bundled_model.py --source endriasf/amharic-dictate-asr-v1 --out build/model
+  python tools/prepare_bundled_model.py --source <hf-user>/efa-amharic-speech-to-text-v1 --out build/model
 """
 import argparse
 import json
@@ -21,7 +21,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", required=True, help="Hugging Face model id or local folder")
     ap.add_argument("--out", required=True)
-    ap.add_argument("--name", default="Amharic Dictate ASR")
+    ap.add_argument("--name", default="EFA Amharic Speech-to-Text v1")
     ap.add_argument("--license", default="cc-by-sa-4.0")
     args = ap.parse_args()
 

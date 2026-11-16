@@ -80,7 +80,7 @@ def open_settings(root, cfg: dict, on_save):
     m = ttk.Frame(nb); nb.add(m, text="Speech model")
     presets = list(MODEL_PRESETS)
     if bundled_model_dir():
-        presets.insert(0, (BUNDLED_MODEL, "Amharic Dictate ASR (built in) — by Endrias F. Abitte"))
+        presets.insert(0, (BUNDLED_MODEL, "EFA Amharic Speech-to-Text (built in) — by Endrias F. Abitte"))
     if cfg["model"] not in dict(presets):
         presets.append((cfg["model"], cfg["model"]))
     labeled(m, 0, "Model", combo(m, "model", presets))

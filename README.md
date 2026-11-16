@@ -60,5 +60,5 @@ Ge'ez Frontier Foundation (public domain). Keep this attribution when distributi
 
 ## Licence and credits
 - App code: MIT licence, © 2026 Endrias F. Abitte (see `LICENSE`).
-- Built-in speech model: *Amharic Dictate ASR* by Endrias F. Abitte, CC BY-SA 4.0.
+- Built-in speech model: *EFA Amharic Speech-to-Text* by Endrias F. Abitte, CC BY-SA 4.0.
 - Data, base model and libraries: see `THIRD_PARTY_NOTICES.md`.
