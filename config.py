@@ -7,6 +7,18 @@ from pathlib import Path
 APP_NAME = "AmharicDictate"
 APP_VERSION = "2.3.0"
 
+BUNDLED_MODEL = "bundled"     # the speech model packaged inside the installer
+
+
+def bundled_model_dir():
+    """Folder of the model shipped inside the app (installer builds), or None when running from source."""
+    import sys
+    for base in (getattr(sys, "_MEIPASS", None), os.path.dirname(os.path.abspath(__file__))):
+        if base and os.path.isfile(os.path.join(base, "model", "config.json")):
+            return os.path.join(base, "model")
+    return None
+
+
 MODEL_PRESETS = [
     ("badrex/Ethio-ASR-amharic", "Ethio-ASR Amharic — best accuracy (non-commercial license)"),
     ("badrex/Ethio-ASR-multilingual-94M", "Ethio-ASR 94M — fastest, for older PCs (non-commercial)"),
@@ -14,7 +26,7 @@ MODEL_PRESETS = [
 ]
 
 DEFAULT_CONFIG = {
-    "model": MODEL_PRESETS[0][0],
+    "model": BUNDLED_MODEL if bundled_model_dir() else MODEL_PRESETS[0][0],
     "device": "auto",            # auto | cpu | cuda
     "fast_preview": True,
     "auto_level": True,          # even out quiet/fading speech before recognition

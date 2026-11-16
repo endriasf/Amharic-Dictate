@@ -3,7 +3,7 @@
 import tkinter as tk
 from tkinter import ttk
 
-from config import APP_NAME, APP_VERSION, MODEL_PRESETS
+from config import APP_NAME, APP_VERSION, BUNDLED_MODEL, MODEL_PRESETS, bundled_model_dir
 from textproc import COMMANDS
 
 INSERT_MODES = [("on_stop", "Paste when I stop"), ("per_phrase", "Type as I speak (each phrase)"),
@@ -79,6 +79,8 @@ def open_settings(root, cfg: dict, on_save):
     # ---- Model
     m = ttk.Frame(nb); nb.add(m, text="Speech model")
     presets = list(MODEL_PRESETS)
+    if bundled_model_dir():
+        presets.insert(0, (BUNDLED_MODEL, "Amharic Dictate ASR (built in) — by Endrias F. Abitte"))
     if cfg["model"] not in dict(presets):
         presets.append((cfg["model"], cfg["model"]))
     labeled(m, 0, "Model", combo(m, "model", presets))

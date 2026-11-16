@@ -13,3 +13,4 @@ debug_audio.flag
 *.log
 update/
 cloud_upload/
+build/model/

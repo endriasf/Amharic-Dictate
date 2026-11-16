@@ -2,6 +2,11 @@ name: Build Windows installer
 
 on:
   workflow_dispatch:          # "Run workflow" button in the Actions tab
+    inputs:
+      model_source:
+        description: "Speech model to package inside the app (Hugging Face id). Empty = download on first launch."
+        required: false
+        default: ""
   push:
     tags: ["v*"]              # e.g. git tag v1.0.0 && git push --tags  -> GitHub Release
 
@@ -24,6 +29,8 @@ jobs:
 
       - name: Build app + installer (includes self-test)
         shell: pwsh
+        env:
+          MODEL_SOURCE: ${{ inputs.model_source || vars.MODEL_SOURCE }}
         run: ./build/build.ps1
 
       - name: Upload installer artifact

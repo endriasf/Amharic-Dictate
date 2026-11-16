@@ -11,6 +11,17 @@ python -m pip install --upgrade pip pyinstaller
 python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
 python -m pip install -r requirements.txt
 
+# Speech model shipped inside the app (set MODEL_SOURCE to a Hugging Face model id or a local folder)
+$modelArgs = @()
+if ($env:MODEL_SOURCE) {
+  Write-Host "Bundling speech model: $env:MODEL_SOURCE"
+  python tools\prepare_bundled_model.py --source $env:MODEL_SOURCE --out build\model
+  if ($LASTEXITCODE -ne 0) { throw "Preparing the bundled model failed" }
+  $modelArgs = @("--add-data", "build\model;model")
+} else {
+  Write-Host "No MODEL_SOURCE set: the app will download its model on first launch"
+}
+
 $meta = "transformers","tokenizers","huggingface-hub","safetensors","regex","requests",
         "packaging","filelock","numpy","tqdm","pyyaml","torch"
 $metaArgs = $meta | ForEach-Object { "--copy-metadata"; $_ }
@@ -27,7 +38,7 @@ pyinstaller --noconfirm --clean --windowed `
   --hidden-import learning --hidden-import lmdecode `
   --exclude-module torchvision --exclude-module torchaudio `
   --exclude-module tensorflow --exclude-module jax --exclude-module flax `
-  @metaArgs `
+  @metaArgs @modelArgs `
   app.py
 
 # Smoke test the frozen app

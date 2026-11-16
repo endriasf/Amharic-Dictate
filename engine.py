@@ -39,6 +39,12 @@ def _remembered_paths() -> dict:
 def ensure_model(model_id: str, on_status=lambda s: None) -> str:
     """Return a local folder for the model. Downloads only the first time; after that no internet is used."""
     import json
+    from config import BUNDLED_MODEL, MODEL_PRESETS, bundled_model_dir
+    if model_id == BUNDLED_MODEL:
+        bundled = bundled_model_dir()
+        if bundled:
+            return bundled                             # shipped inside the app: never downloads
+        model_id = MODEL_PRESETS[0][0]                 # running from source: fall back to the default model
     if os.path.isdir(model_id):
         return model_id
     paths = _remembered_paths()

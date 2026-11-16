@@ -440,6 +440,8 @@ class App:
     def show_about(self):
         from tkinter import messagebox
         model = self.cfg.get("model", "")
+        if model == "bundled":
+            model = "Amharic Dictate ASR (built in)"
         if "Ethio-ASR" in model:
             model_credit = ("Speech model: Ethio-ASR (Amharic) by badrex, CC BY-NC 4.0 — "
                             "free, non-commercial use only.")
