@@ -441,7 +441,7 @@ class App:
         from tkinter import messagebox
         model = self.cfg.get("model", "")
         if model == "bundled":
-            model = "EFA Amharic Speech-to-Text v1 (built in)"
+            model = "Amharic Speech-to-Text EFA v1 (built in)"
         if "Ethio-ASR" in model:
             model_credit = ("Speech model: Ethio-ASR (Amharic) by badrex, CC BY-NC 4.0 — "
                             "free, non-commercial use only.")
