@@ -1,6 +1,8 @@
 @echo off
 REM Unzips the new model (first time) and compares it with Ethio-ASR on your voice-profile recordings.
 cd /d "%~dp0"
+set PYTHONIOENCODING=utf-8
+chcp 65001 >nul
 set MODEL=%~dp0models\final
 echo Unzipping the model (one time, about a minute)...
 if not exist models mkdir models

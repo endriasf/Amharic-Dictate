@@ -66,6 +66,11 @@ def find_clips():
 
 
 def main():
+    for stream in (sys.stdout, sys.stderr):        # Amharic text in logs (Windows defaults to cp1252)
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
     models = sys.argv[1:] or ["badrex/Ethio-ASR-amharic"]
     clips = find_clips()
     if not clips:
