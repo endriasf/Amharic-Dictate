@@ -7,7 +7,9 @@
 AppId={{C0199516-7A55-464A-A36C-54B31DE0B193}
 AppName=Amharic Dictate
 AppVersion={#AppVersion}
-AppPublisher=Amharic Dictate
+AppPublisher=Endrias F. Abitte
+AppCopyright=© 2026 Endrias F. Abitte
+LicenseFile=..\LICENSE
 DefaultDirName={localappdata}\Programs\AmharicDictate
 DefaultGroupName=Amharic Dictate
 PrivilegesRequired=lowest
@@ -27,6 +29,8 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
 
 [Files]
 Source: "..\dist\AmharicDictate\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Amharic Dictate"; Filename: "{app}\AmharicDictate.exe"

@@ -1,8 +1,11 @@
-# Amharic Dictate v1.0 — offline Amharic dictation for Windows
+# Amharic Dictate — free, offline Amharic dictation for Windows
+
+**Created by Endrias F. Abitte.** Free and open source (MIT licence). If you use or build on this
+project, please keep the credit: *Amharic Dictate by Endrias F. Abitte*.
 
 Press a hotkey, speak Amharic, and the text appears in whatever you're working in:
 Word, Outlook, Teams, a browser, any text box. Speech is processed **on the PC**; after the
-one-time model download, no internet is needed.
+one-time install, no internet is needed — the speech model is built into the installer.
 
 ## For users (installer)
 1. Run `AmharicDictate-Setup-1.0.0.exe` (no admin rights needed).
@@ -54,3 +57,8 @@ to publish it as a GitHub Release.
 Sources: Leipzig Corpora Collection, amh_wikipedia_2016_30K and amh_wikipedia_2021_30K (CC BY 4.0;
 D. Goldhahn, T. Eckart & U. Quasthoff, LREC 2012), and the GNU Aspell Amharic word list by Daniel Yacob /
 Ge'ez Frontier Foundation (public domain). Keep this attribution when distributing the app.
+
+## Licence and credits
+- App code: MIT licence, © 2026 Endrias F. Abitte (see `LICENSE`).
+- Built-in speech model: *Amharic Dictate ASR* by Endrias F. Abitte, CC BY-SA 4.0.
+- Data, base model and libraries: see `THIRD_PARTY_NOTICES.md`.
