@@ -216,6 +216,7 @@ class App:
                 pystray.MenuItem("Delete last word", lambda: self.delete_word()),
                 pystray.MenuItem("Settings…", lambda: self.ui_q.put(("settings",))),
                 pystray.MenuItem("Voice profiles…", lambda: self.ui_q.put(("train",))),
+                pystray.MenuItem("About…", lambda: self.ui_q.put(("about",))),
                 pystray.MenuItem("Open history", lambda: self._open_file("history.txt")),
                 pystray.MenuItem("Open log", lambda: self._open_file("error.log")),
                 pystray.MenuItem(f"Quit {APP_NAME}", lambda: self.quit()),
@@ -435,6 +436,27 @@ class App:
         new = dict(self.cfg); new["profile"] = name
         self.cfg = new
         save_config(new)
+
+    def show_about(self):
+        from tkinter import messagebox
+        model = self.cfg.get("model", "")
+        if "Ethio-ASR" in model:
+            model_credit = ("Speech model: Ethio-ASR (Amharic) by badrex, CC BY-NC 4.0 — "
+                            "free, non-commercial use only.")
+        else:
+            model_credit = (f"Speech model: {model}\nTrained by Endrias F. Abitte from facebook/w2v-bert-2.0 (MIT) "
+                            "on WAXAL (Google & partners) and FLEURS (Google) Amharic speech data, CC BY-SA 4.0.")
+        messagebox.showinfo(
+            f"About {APP_NAME}",
+            f"{APP_NAME} {APP_VERSION}\n"
+            "Offline Amharic dictation for Windows.\n\n"
+            "Created by Endrias F. Abitte\n\n"
+            f"{model_credit}\n\n"
+            "Amharic dictionary: Leipzig Corpora Collection (CC BY 4.0) and GNU Aspell Amharic "
+            "word list by Daniel Yacob.\n"
+            "Reading sentences: Leipzig Corpora Collection, Amharic Wikipedia (CC BY 4.0).\n\n"
+            "Everything you dictate stays on this computer.",
+            parent=self.root)
 
     def open_training(self):
         from voice_training import VoiceTrainingWindow
@@ -833,6 +855,8 @@ class App:
                     self.undo()
                 elif kind == "train":
                     self.open_training()
+                elif kind == "about":
+                    self.show_about()
                 elif kind == "bar":
                     if msg[1]:
                         self.buttons["pause"].config(text="⏸  Pause")
