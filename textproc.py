@@ -111,7 +111,9 @@ def _matches(words, pattern) -> bool:
 _FOUR_RE = re.compile(r"4(ራት|ት)?")       # the model sometimes writes አራት as "4", "4ት" or "4ራት"
 
 
-_JOINED_STOP_RE = re.compile(r"^(?:አራ?ት?|ኣራት|4(?:ራ?ት)?)[ነመ][ጥጢጣ]?[ብቡ]$")   # አራትነጥብ, 4ነጥብ, አራነጥብ…
+_JOINED_STOP_RE = re.compile(r"^(?:(?:አራ?ት?|ኣራት|4(?:ራ?ት)?)[ነመ][ጥጢጣ]?[ብቡ]|4(?:ራ?ት)?ጥ?ብ)$")   # አራትነጥብ, 4ነጥብ, 4ብ…
+# a full stop said at the very end, with "ነጥብ" cut off as you stop talking: "... ነው 4"
+_TRAILING_FOUR_RE = re.compile(r"(?:^|\s)4(?:ራ?ት)?\s*$")
 
 
 _FOURISH = {fold(x) for x in ("አራት", "አራ", "አት", "አ", "ራት", "ኣራት", "አረት", "አራቱ")}
@@ -341,6 +343,8 @@ def finish_phrase(text: str, cfg: dict) -> str:
     text = clean_text(text)
     # the model sometimes writes the spoken "አራት ነጥብ" as "4።" / "አ።": keep that as the user's command
     text = re.sub(r"(?:^|(?<=\s))(?:4|አ|አራ|አራት)\s*።", " አራት ነጥብ ", text).strip()
+    if cfg.get("voice_commands", True) and len(text.split()) > 1:
+        text = _TRAILING_FOUR_RE.sub(" አራት ነጥብ", text).strip()
     if not cfg.get("model_punctuation", False):
         # the model guesses ። etc. on its own; by default only spoken commands add punctuation
         text = _SPACE_RE.sub(" ", _MODEL_PUNCT_RE.sub(" ", text)).strip()
