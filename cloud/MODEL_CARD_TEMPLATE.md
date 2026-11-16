@@ -29,6 +29,24 @@ Raw model output (greedy CTC decoding, no dictionary or language model):
 
 Training: 3 epochs on 33,566 clips (154 hours), one RTX 5090, about 2 hours.
 
+## How to use
+```python
+from transformers import AutoModelForCTC, AutoProcessor
+import torch, soundfile as sf
+
+model_id = "Abittee/amharic-speech-to-text-efa-v1"
+processor = AutoProcessor.from_pretrained(model_id)
+model = AutoModelForCTC.from_pretrained(model_id).eval()
+
+audio, sr = sf.read("speech.wav")          # 16 kHz mono
+inputs = processor(audio, sampling_rate=16000, return_tensors="pt")
+with torch.no_grad():
+    ids = model(**inputs).logits.argmax(-1)
+print(processor.batch_decode(ids)[0])
+```
+Or use it in the free Windows app **Amharic Dictate**, which adds live dictation, punctuation
+commands, spell-check and per-user voice profiles.
+
 ## Training data and credits
 - Base model: [facebook/w2v-bert-2.0](https://huggingface.co/facebook/w2v-bert-2.0) — MIT licence, © Meta.
 - [WAXAL](https://huggingface.co/datasets/google/WaxalNLP) Amharic ASR (amh_asr) — Google Research and partners;
