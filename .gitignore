@@ -14,3 +14,6 @@ debug_audio.flag
 update/
 cloud_upload/
 build/model/
+compare_log.txt
+compare_results.txt
+models/
