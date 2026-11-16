@@ -270,7 +270,7 @@ def main():
         args.base_model,
         attention_dropout=0.0, hidden_dropout=0.0, feat_proj_dropout=0.0,
         mask_time_prob=0.0, layerdrop=0.0,
-        ctc_loss_reduction="mean", add_adapter=True,
+        ctc_loss_reduction="mean", add_adapter=True, ctc_zero_infinity=True,
         pad_token_id=processor.tokenizer.pad_token_id,
         vocab_size=len(processor.tokenizer),
     )
