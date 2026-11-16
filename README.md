@@ -112,24 +112,69 @@ Colours in the box:
 
 ---
 
-## 5. Voice profile (better accuracy)
+## 5. Train it to your voice, add your own words, learn from corrections
 
-The app can learn your voice. Open it from the tray icon → **Voice profiles…**.
+All three are in one window: tray icon → **Voice profiles…**. Everything stays on your computer.
 
-1. **Setup reading:** read about 50 sentences aloud (5–10 minutes). Reading more, up to 300,
-   gives better accuracy. You can stop and continue another day.
-2. **Train profile:** click **Start training**. It runs in the background on your computer
-   (usually 15–40 minutes) and you can keep working.
-3. When it finishes, your profile switches on by itself, but only if it is more accurate for you
-   than no profile. The window shows the before and after results.
+### 5a. Create your voice profile
+The first time you start the app, it asks **"Who's dictating?"**. Type your name to create your
+profile. To add another person, open **Voice profiles…** and click **New…** next to
+**Who's dictating**. Each person's training, words and corrections are kept separately.
 
-More options in the same window:
-- **Who's dictating:** each person can have their own profile.
-- **My words:** add names, places and terms you use often. The app prefers them and never marks
-  them as misspelled.
-- **Learning:** tick **Learn from my corrections** to let the app improve from the words you fix.
-  Your corrections are saved on your computer only.
-- **Export / Import:** move a profile to another computer.
+### 5b. Train the app to your voice
+**Step 1: record the setup reading** (tab **1. Setup reading**)
+1. A sentence is shown. Press **● Record** and read it aloud at your normal speed.
+2. Press **■ Stop** when you finish.
+3. Press **▶ Play back** to check it. If you stumbled, press **● Re-record**.
+4. Press **✓ Save & next** for the next sentence, or **Skip sentence** to skip one.
+5. Aim for **50 sentences** (5–10 minutes). Training needs at least 30. Reading more, up to 300,
+   gives better accuracy. You can close the window and continue another day.
+
+The level bar shows your microphone volume. The window warns you if a recording is too quiet or
+too loud.
+
+**Step 2: train** (tab **2. Train profile**)
+1. Click **Start training**. It runs in the background, usually for **15–40 minutes**. You can keep
+   working, and even keep dictating.
+2. When it finishes, the app compares your voice profile with no profile on recordings it did not
+   train on. If your profile is more accurate, it switches on automatically and the window shows
+   the before and after results.
+3. To turn your profile off, untick **Use this voice profile when dictating**.
+
+Read more sentences later and click **Start training** again whenever you like. Each retraining
+uses all your recordings.
+
+### 5c. Add your own words (My words)
+For names, places, organisations and terms the app gets wrong or underlines in red. There are two
+ways to add them:
+- **While dictating:** click the word in the dictation box, then click **★ My words**.
+- **In the window:** open tab **3. My words**, type the word (or several words), then press
+  **Add** or Enter.
+
+To remove words, select them in the list and click **Remove selected**.
+
+Words you add are preferred when the app is choosing between similar words, near-misses are
+corrected to them automatically, and they are never marked as misspelled. The list belongs to
+the profile, so each person has their own.
+
+### 5d. Learn from your corrections
+1. Open tab **4. Learning** and tick **Learn from my corrections**.
+2. Dictate as usual. When you fix a word in the dictation box and then press **✓ Done**, the app
+   saves that sentence's audio with your corrected text.
+   - Dictations you **cancel** are never saved.
+   - Sentences that are too unclear to match safely, such as sentences you rewrote completely,
+     are skipped.
+3. With **Retrain automatically after 25 new corrections** ticked, your profile improves itself in
+   the background when you are not dictating. Otherwise, click **Start training** in tab 2
+   whenever you want.
+
+The tab shows how many corrections are saved. **Delete saved corrections** removes them; your
+setup reading is kept. Untick **Learn from my corrections** before dictating anything you don't
+want stored on the computer.
+
+### 5e. Move a profile to another computer
+Click **Export…** to save the profile as a .zip file. On the other computer, open
+**Voice profiles…** and click **Import…**.
 
 ---
 
