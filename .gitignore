@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+build/Output/
+build/AmharicDictate/
+*.spec
+debug/
+decode_log.txt
+decode_log.flag
+debug_audio.flag
+*.log
+update/
+cloud_upload/

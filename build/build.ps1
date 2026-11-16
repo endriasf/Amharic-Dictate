@@ -1,0 +1,45 @@
+# Builds dist\AmharicDictate\ (PyInstaller) and, if Inno Setup is installed,
+# build\Output\AmharicDictate-Setup-<version>.exe
+# Run from the repo root:   powershell -ExecutionPolicy Bypass -File build\build.ps1
+$ErrorActionPreference = "Stop"
+Set-Location (Split-Path $PSScriptRoot -Parent)
+
+$version = (Select-String -Path config.py -Pattern 'APP_VERSION = "(.+)"').Matches[0].Groups[1].Value
+Write-Host "Building AmharicDictate $version"
+
+python -m pip install --upgrade pip pyinstaller
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r requirements.txt
+
+$meta = "transformers","tokenizers","huggingface-hub","safetensors","regex","requests",
+        "packaging","filelock","numpy","tqdm","pyyaml","torch"
+$metaArgs = $meta | ForEach-Object { "--copy-metadata"; $_ }
+
+pyinstaller --noconfirm --clean --windowed `
+  --name AmharicDictate `
+  --icon assets\icon.ico `
+  --collect-submodules transformers `
+  --collect-data transformers `
+  --hidden-import pystray._win32 `
+  --add-data "amharic_words.tsv;." `
+  --add-data "training_sentences.txt;." `
+  --hidden-import voiceprofile --hidden-import voice_training --hidden-import train_local `
+  --hidden-import learning --hidden-import lmdecode `
+  --exclude-module torchvision --exclude-module torchaudio `
+  --exclude-module tensorflow --exclude-module jax --exclude-module flax `
+  @metaArgs `
+  app.py
+
+# Smoke test the frozen app
+$report = Join-Path $env:TEMP "amharicdictate-selftest.txt"
+$p = Start-Process -FilePath dist\AmharicDictate\AmharicDictate.exe -ArgumentList "--selftest", $report -Wait -PassThru
+Get-Content $report
+if ($p.ExitCode -ne 0) { throw "Self-test failed" }
+
+$iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+if (Test-Path $iscc) {
+  & $iscc "/DAppVersion=$version" build\installer.iss
+  Write-Host "Installer: build\Output\AmharicDictate-Setup-$version.exe"
+} else {
+  Write-Host "Inno Setup not found; skipping installer. App folder: dist\AmharicDictate"
+}

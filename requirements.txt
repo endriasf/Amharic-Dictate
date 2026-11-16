@@ -1,0 +1,10 @@
+numpy
+sounddevice
+keyboard
+pyperclip
+pystray
+pillow
+transformers>=4.46,<5
+huggingface_hub
+safetensors
+# torch: installed separately (setup.bat / build.ps1) to get the CPU build
