@@ -5,7 +5,7 @@ Downloads a model from Hugging Face (or copies a local folder), stores its weigh
 (about half the size, no meaningful accuracy change — the app converts back to full precision when
 loading), and stamps the author and licence into the weights file and config.json.
 
-  python tools/prepare_bundled_model.py --source <hf-user>/amharic-speech-to-text-efa-v1 --out build/model
+  python tools/prepare_bundled_model.py --source Abittee/amharic-speech-to-text-efa-v1 --out build/model
 """
 import argparse
 import json

@@ -16,7 +16,7 @@ built-in *Amharic Speech-to-Text EFA* model instead.
 ## Build the installer (GitHub Actions)
 1. Open the repository's **Actions** tab → **Build Windows installer** → **Run workflow**.
 2. In **model_source**, enter the Hugging Face ID of the speech model to package inside the app
-   (for example `<hf-user>/amharic-speech-to-text-efa-v1`). Leave it empty to build an app that
+   (for example `Abittee/amharic-speech-to-text-efa-v1`). Leave it empty to build an app that
    downloads its model on first launch.
 3. When the run finishes, download **AmharicDictate-Setup** from the run's *Artifacts*.
 4. To publish a GitHub Release, push a version tag, for example `git tag v2.3.0 && git push --tags`.

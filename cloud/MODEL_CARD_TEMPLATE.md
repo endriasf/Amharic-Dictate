@@ -20,9 +20,14 @@ Amharic speech-to-text model (CTC) used by **Amharic Dictate**, an offline Amhar
 
 ## Results
 <!-- filled in from the training log / comparison -->
-| Test set | Word error rate | Character error rate |
-|---|---|---|
-| FLEURS Amharic test | – | – |
+Raw model output (greedy CTC decoding, no dictionary or language model):
+
+| Test set | Clips | Hours | Word error rate | Character error rate |
+|---|---|---|---|---|
+| WAXAL + FLEURS Amharic test | 3,536 | 15.4 | 24.4% | 9.6% |
+| WAXAL + FLEURS Amharic validation | 714 | 3.2 | 20.6% | 7.6% |
+
+Training: 3 epochs on 33,566 clips (154 hours), one RTX 5090, about 2 hours.
 
 ## Training data and credits
 - Base model: [facebook/w2v-bert-2.0](https://huggingface.co/facebook/w2v-bert-2.0) — MIT licence, © Meta.
