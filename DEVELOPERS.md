@@ -9,7 +9,9 @@ setup.bat     one time: creates .venv, installs CPU PyTorch and requirements.txt
 start.bat     start the app
 restart.bat   stop and start it again
 ```
-When run from source, the app downloads its speech model from Hugging Face on first launch.
+When run from source, the app downloads a speech model from Hugging Face on first launch
+(by default Ethio-ASR, which is licensed for non-commercial use only). Released installers use the
+built-in *Amharic Speech-to-Text EFA* model instead.
 
 ## Build the installer (GitHub Actions)
 1. Open the repository's **Actions** tab → **Build Windows installer** → **Run workflow**.
@@ -47,4 +49,3 @@ See [cloud/README_CLOUD.md](cloud/README_CLOUD.md). The model card template for 
 - Text can't be typed into programs running as Administrator unless Amharic Dictate also runs
   elevated.
 - No automatic punctuation yet: use voice commands or the punctuation buttons.
-- The optional Ethio-ASR models in Settings are CC BY-NC 4.0 (non-commercial use only).
