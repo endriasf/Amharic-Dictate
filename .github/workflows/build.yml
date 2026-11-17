@@ -36,8 +36,9 @@ jobs:
       - name: Security check of bundled libraries (known vulnerabilities)
         shell: pwsh
         run: |
+          $env:PYTHONIOENCODING = "utf-8"
           python -m pip install pip-audit
-          python -m pip_audit --progress-spinner off --desc on --skip-editable 2>&1 | Tee-Object -FilePath build/Output/security-audit.txt
+          python -m pip_audit --progress-spinner off --skip-editable 2>&1 | Tee-Object -FilePath build/Output/security-audit.txt
           if ($LASTEXITCODE -ne 0) { Write-Host "::warning::pip-audit reported known vulnerabilities - see security-audit.txt" }
           exit 0
 
