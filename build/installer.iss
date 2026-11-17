@@ -43,3 +43,22 @@ Filename: "{app}\AmharicDictate.exe"; Description: "Launch Amharic Dictate"; Fla
 
 [UninstallRun]
 Filename: "taskkill"; Parameters: "/IM AmharicDictate.exe /F"; Flags: runhidden; RunOnceId: "KillApp"
+
+[Code]
+// On uninstall: remove the "start with Windows" entry, and offer to delete the user's own data
+// (settings, voice profiles, recordings, corrections). Silent uninstalls keep the data.
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  DataDir: String;
+begin
+  if CurUninstallStep = usPostUninstall then
+  begin
+    RegDeleteValue(HKEY_CURRENT_USER, 'Software\Microsoft\Windows\CurrentVersion\Run', 'AmharicDictate');
+    DataDir := ExpandConstant('{userappdata}\AmharicDictate');
+    if DirExists(DataDir) and (not UninstallSilent) then
+      if MsgBox('Also delete your Amharic Dictate settings, voice profiles and voice recordings?' + #13#10 + #13#10 +
+                'Choose No to keep them for a later reinstall.', mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+        DelTree(DataDir, True, True, True);
+  end;
+end;
+

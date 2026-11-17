@@ -46,6 +46,50 @@ def wait_modifiers_released(timeout=1.5):
         time.sleep(0.03)
 
 
+def set_clipboard_private(text: str) -> bool:
+    """Put text on the clipboard, marked so Windows keeps it out of clipboard history and cloud sync."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        u32, k32 = ctypes.windll.user32, ctypes.windll.kernel32
+        k32.GlobalAlloc.argtypes = [wintypes.UINT, ctypes.c_size_t]
+        k32.GlobalAlloc.restype = wintypes.HGLOBAL
+        k32.GlobalLock.argtypes = [wintypes.HGLOBAL]
+        k32.GlobalLock.restype = ctypes.c_void_p
+        k32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
+        u32.SetClipboardData.argtypes = [wintypes.UINT, wintypes.HANDLE]
+        u32.SetClipboardData.restype = wintypes.HANDLE
+        u32.RegisterClipboardFormatW.argtypes = [wintypes.LPCWSTR]
+        u32.RegisterClipboardFormatW.restype = wintypes.UINT
+        u32.OpenClipboard.argtypes = [wintypes.HWND]
+
+        def put(fmt, data: bytes):
+            h = k32.GlobalAlloc(0x0002, len(data))          # GMEM_MOVEABLE
+            ptr = k32.GlobalLock(h)
+            ctypes.memmove(ptr, data, len(data))
+            k32.GlobalUnlock(h)
+            if not u32.SetClipboardData(fmt, h):
+                raise OSError("SetClipboardData failed")
+
+        for _ in range(10):                                 # another app may hold the clipboard briefly
+            if u32.OpenClipboard(None):
+                break
+            time.sleep(0.02)
+        else:
+            return False
+        try:
+            u32.EmptyClipboard()
+            put(13, (text + "\0").encode("utf-16-le"))    # CF_UNICODETEXT
+            zero = (0).to_bytes(4, "little")
+            put(u32.RegisterClipboardFormatW("CanIncludeInClipboardHistory"), zero)
+            put(u32.RegisterClipboardFormatW("CanUploadToCloudClipboard"), zero)
+        finally:
+            u32.CloseClipboard()
+        return True
+    except Exception:
+        return False
+
+
 def paste_text(text: str):
     """Paste via the clipboard (reliable for Ethiopic script).
 
@@ -57,7 +101,8 @@ def paste_text(text: str):
     wait_modifiers_released()
     data = text.replace("\n", "\r\n")
     for _ in range(3):                    # make sure the clipboard really holds our text
-        pyperclip.copy(data)
+        if not set_clipboard_private(data):
+            pyperclip.copy(data)
         time.sleep(0.05)
         try:
             if pyperclip.paste() == data:
@@ -104,6 +149,8 @@ class App:
         self.ui_q: "queue.Queue[tuple]" = queue.Queue()
         self.engine = None
         self.stream = None
+        self._mic_users = set()
+        self._mic_lock = threading.Lock()
         self.active = False
         self.loading = False
         self._toggle_lock = threading.Lock()
@@ -302,8 +349,6 @@ class App:
                 self.engine.decode_log = os.path.join(here, "decode_log.txt")
             if os.path.exists(os.path.join(here, "debug_audio.flag")):   # opt-in diagnostics
                 self.engine.debug_dir = os.path.join(here, "debug")
-            if self.stream is None:
-                self._open_mic()
             self._register_hotkeys()
             self.tray.icon = tray_image("ready")
             self.tray.title = f"{APP_NAME} — {self.hotkey_label()}" + (f" — {profile}" if profile else "")
@@ -332,6 +377,24 @@ class App:
             callback=self._on_mic,
         )
         self.stream.start()
+
+    def mic_acquire(self, who: str):
+        """Open the microphone while someone needs it (dictation or a training recording)."""
+        with self._mic_lock:
+            self._mic_users.add(who)
+            if self.stream is None:
+                self._open_mic()
+
+    def mic_release(self, who: str):
+        """Close the microphone as soon as nothing needs it, so it is never on in the background."""
+        with self._mic_lock:
+            self._mic_users.discard(who)
+            if not self._mic_users and self.stream is not None:
+                try:
+                    self.stream.stop()
+                    self.stream.close()
+                finally:
+                    self.stream = None
 
     def _on_mic(self, indata, frames, t, status):
         block = indata[:, 0]
@@ -636,6 +699,7 @@ class App:
             return
         try:
             if not self.active:
+                self.mic_acquire("dictation")
                 self.active = True
                 self.engine.start()
                 self._add_session_hotkeys()
@@ -650,6 +714,7 @@ class App:
                 self.ui_q.put(("bar", False))
                 self.ui_q.put(("status", "Discarding…" if discard else "Finishing…"))
                 text = self.engine.stop()
+                self.mic_release("dictation")
                 self.tray.icon = tray_image("ready")
                 if self.cfg["beep"]:
                     beep(520)
@@ -663,6 +728,10 @@ class App:
         except Exception as e:
             log_error(traceback.format_exc())
             self.active = False
+            try:
+                self.mic_release("dictation")
+            except Exception:
+                pass
             self.ui_q.put(("show", f"Error: {e}", "Details are in the log (tray → Open log)."))
         finally:
             self._toggle_lock.release()
@@ -927,6 +996,10 @@ def selftest(out_path: str) -> int:
 
 
 def main():
+    from config import bundled_model_dir
+    if bundled_model_dir():               # installed app: everything is local, never contact the internet
+        for var in ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_HUB_DISABLE_TELEMETRY", "HF_DATASETS_OFFLINE"):
+            os.environ[var] = "1"
     if len(sys.argv) >= 2 and sys.argv[1] == "--train":       # background voice training (packaged app)
         import train_local
         sys.exit(train_local.main(sys.argv[2:]))

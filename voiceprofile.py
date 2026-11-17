@@ -142,23 +142,43 @@ def export_profile(name: str, zip_path: str):
                 z.write(p, p.relative_to(d).as_posix())
 
 
+_IMPORT_ALLOWED = re.compile(r"^(profile\.json|my_words\.txt|adapter\.pt|voice_data/progress\.json|"
+                             r"voice_data/(clip|corr)_\d{1,6}\.(wav|txt))$")
+MAX_IMPORT_BYTES = 3 * 1024 ** 3        # a real profile is well under 1 GB
+MAX_IMPORT_FILES = 10000
+
+
 def import_profile(zip_path: str) -> str:
+    """Import a profile exported by this app. Only the app's own file types are accepted."""
     with zipfile.ZipFile(zip_path) as z:
-        names = z.namelist()
-        if "profile.json" not in names:
+        infos = [i for i in z.infolist() if not i.is_dir()]
+        if not any(i.filename == "profile.json" for i in infos):
             raise ValueError("This file is not an Amharic Dictate voice profile.")
+        wanted = [i for i in infos if _IMPORT_ALLOWED.match(i.filename)]
+        if len(wanted) > MAX_IMPORT_FILES or sum(i.file_size for i in wanted) > MAX_IMPORT_BYTES:
+            raise ValueError("This voice profile is too large to import.")
         meta = json.loads(z.read("profile.json").decode("utf-8"))
-        name = create_profile(meta.get("name", Path(zip_path).stem))
+        if not isinstance(meta, dict):
+            raise ValueError("This file is not an Amharic Dictate voice profile.")
+        name = create_profile(str(meta.get("name", Path(zip_path).stem)))
         dest = profile_dir(name).resolve()
-        for member in names:
-            target = (dest / member).resolve()
-            if dest not in target.parents and target != dest:
-                continue                         # ignore unsafe paths inside the zip
-            if member.endswith("/"):
-                target.mkdir(parents=True, exist_ok=True)
+        for info in wanted:                      # names are fixed patterns: no "..", no absolute paths
+            target = (dest / info.filename).resolve()
+            if dest not in target.parents:
                 continue
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(z.read(member))
+            with z.open(info) as src, open(target, "wb") as out:
+                remaining = info.file_size
+                while True:                     # copy in chunks, never more than the declared size
+                    chunk = src.read(min(1 << 20, remaining + 1))
+                    if not chunk:
+                        break
+                    remaining -= len(chunk)
+                    if remaining < 0:
+                        raise ValueError("Damaged voice profile file.")
+                    out.write(chunk)
+        meta = {k: meta[k] for k in ("created", "use_adapter", "result", "learn_from_corrections",
+                                     "auto_retrain", "last_trained_corrections") if k in meta}
         meta["name"] = name
         save_meta(name, meta)
     return name

@@ -417,6 +417,11 @@ class VoiceTrainingWindow:
             return
         if not self.recording:
             self.buf = []
+            try:
+                self.app.mic_acquire("training")
+            except Exception as e:
+                self.msg.config(text=f"Microphone error: {e}", foreground="#a33")
+                return
             self.recording = True
             self.rec_btn.config(text="■  Stop")
             self.msg.config(text="Recording… read the sentence, then press Stop.", foreground="#a33")
@@ -424,6 +429,7 @@ class VoiceTrainingWindow:
             self.save_btn.config(state="disabled")
         else:
             self.recording = False
+            self.app.mic_release("training")
             self.rec_btn.config(text="●  Re-record")
             audio = np.concatenate(self.buf) if self.buf else np.zeros(0, np.float32)
             dur = len(audio) / SR
@@ -467,6 +473,8 @@ class VoiceTrainingWindow:
         self.refresh_counts()
 
     def skip(self):
+        if self.recording:
+            self.app.mic_release("training")
         self.recording = False
         self.rec_btn.config(text="●  Record")
         self.state["next"] = self.state.get("next", 0) + 1
@@ -513,6 +521,8 @@ class VoiceTrainingWindow:
         self.win.after(150, self._poll)
 
     def close(self):
+        if self.recording:
+            self.app.mic_release("training")
         self.recording = False
         self.app.recorder_tap = None
         self.win.destroy()

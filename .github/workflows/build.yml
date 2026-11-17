@@ -33,15 +33,36 @@ jobs:
           MODEL_SOURCE: ${{ inputs.model_source || vars.MODEL_SOURCE }}
         run: ./build/build.ps1
 
+      - name: Security check of bundled libraries (known vulnerabilities)
+        shell: pwsh
+        run: |
+          python -m pip install pip-audit
+          python -m pip_audit --progress-spinner off --desc on --skip-editable 2>&1 | Tee-Object -FilePath build/Output/security-audit.txt
+          if ($LASTEXITCODE -ne 0) { Write-Host "::warning::pip-audit reported known vulnerabilities - see security-audit.txt" }
+          exit 0
+
+      - name: Installer checksum (SHA-256)
+        shell: pwsh
+        run: |
+          Get-ChildItem build/Output/*.exe | ForEach-Object {
+            $h = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$h  $($_.Name)" | Tee-Object -FilePath "build/Output/SHA256SUMS.txt" -Append
+          }
+
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: AmharicDictate-Setup
-          path: build/Output/*.exe
+          path: |
+            build/Output/*.exe
+            build/Output/SHA256SUMS.txt
+            build/Output/security-audit.txt
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: build/Output/*.exe
+          files: |
+            build/Output/*.exe
+            build/Output/SHA256SUMS.txt
           generate_release_notes: true
