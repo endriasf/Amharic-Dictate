@@ -74,7 +74,39 @@ def open_settings(root, cfg: dict, on_save):
     check(t, 7, "autocorrect_spelling", "Fix sound-alike spellings using the Amharic dictionary (ሠ/ሰ, ፀ/ጸ, ሐ/ሀ…)")
     check(t, 6, "model_punctuation", "Let the speech model add ። ፣ ? on its own (often wrong)")
     labeled(t, 4, "Pause that ends a phrase (ms)", entry(t, "silence_ms", 8))
-    labeled(t, 5, "Overlay font size", entry(t, "font_size", 8))
+    # dictation text size: slider + number + live Amharic preview
+    fs_min, fs_max, fs_default = 10, 36, 15
+    try:
+        fs_now = max(fs_min, min(fs_max, int(cfg.get("font_size", fs_default))))
+    except (TypeError, ValueError):
+        fs_now = fs_default
+    fs_var = tk.IntVar(value=fs_now)
+    v["font_size"] = (fs_var, None)
+    fs = ttk.Frame(t)
+    preview = tk.Label(t, text="ሰላም፣ እንዴት ነህ? ይህ የጽሑፍ መጠን ነው።", anchor="w", fg="white", bg="#202124",
+                       padx=10, pady=6)
+
+    def fs_update(*_):
+        try:
+            size = int(float(fs_var.get()))
+        except (tk.TclError, ValueError):
+            return
+        size = max(fs_min, min(fs_max, size))
+        if fs_var.get() != size:
+            fs_var.set(size)
+        preview.config(font=("Ebrima", size))
+
+    ttk.Scale(fs, from_=fs_min, to=fs_max, orient="horizontal", length=200,
+              command=lambda val: fs_var.set(int(float(val)))).pack(side="left")
+    fs.winfo_children()[0].set(fs_now)
+    ttk.Spinbox(fs, from_=fs_min, to=fs_max, textvariable=fs_var, width=4,
+                command=lambda: fs.winfo_children()[0].set(fs_var.get())).pack(side="left", padx=8)
+    ttk.Button(fs, text=f"Default ({fs_default})",
+               command=lambda: (fs_var.set(fs_default), fs.winfo_children()[0].set(fs_default))).pack(side="left")
+    fs_var.trace_add("write", fs_update)
+    labeled(t, 5, "Dictation text size", fs)
+    preview.grid(row=9, column=0, columnspan=2, sticky="we", padx=10, pady=(2, 8))
+    fs_update()
 
     # ---- Model
     m = ttk.Frame(nb); nb.add(m, text="Speech model")
@@ -107,8 +139,8 @@ def open_settings(root, cfg: dict, on_save):
                 if key in ("silence_ms", "font_size"):
                     val = int(val)
                 new[key] = val
-        except ValueError:
-            status.config(text="Numbers only for pause length and font size.")
+        except (ValueError, tk.TclError):
+            status.config(text="Numbers only for pause length and text size.")
             return
         if not str(new["model"]).strip():
             status.config(text="Choose a model.")
