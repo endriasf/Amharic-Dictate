@@ -294,6 +294,29 @@ class DictationEngine:
         with self._lock:
             return join_phrases(self.committed)
 
+    def document_text(self) -> str:
+        """All finished text in reading order, as it should appear in the document
+        (a highlighted word still shows as itself; speech still being recognised is left out)."""
+        with self._lock:
+            if not self._replacing:
+                return join_phrases(self.committed).strip(" ")
+            parts = list(self.committed)
+            if self._gap_word:
+                parts.append(self._gap_word)
+            if self._after:
+                parts.append(self._after)
+            return join_phrases(parts).strip(" ")
+
+    def set_document_text(self, text: str) -> bool:
+        """The person edited the text in the document itself: adopt it (Undo can bring the old text back)."""
+        with self._lock:
+            if self._replacing or text == join_phrases(self.committed).strip(" "):
+                return False                 # mid-correction: the next sync will pick it up
+            self._history.append((list(self.committed), self._after, self._replacing, self._gap_word))
+            self.committed = [text] if text else []
+        self._refresh()
+        return True
+
     def _restore_selection(self):
         with self._lock:
             if self._replacing:

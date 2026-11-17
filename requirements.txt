@@ -7,4 +7,5 @@ pillow
 transformers>=5.10,<6
 huggingface_hub
 safetensors
+pywin32; sys_platform == "win32"
 # torch: installed separately (setup.bat / build.ps1) to get the CPU build

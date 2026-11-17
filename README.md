@@ -48,6 +48,18 @@ taskbar's system tray (bottom right, next to the clock; click **^** if you don't
 
 The text also stays on the clipboard, so you can paste it again with **Ctrl + V**.
 
+### Live dictation into Microsoft Word
+When you start dictating while **Word** is the active window, your words go **straight into the
+document** as you speak, at the cursor:
+- Corrections you make in the dictation box (replace, remove, insert, join, punctuation, Undo)
+  update the document immediately.
+- You can also edit the dictated text **directly in Word**; the dictation box updates to match.
+- Typing anywhere else in the document is never touched.
+- **✓ Done** simply finishes (the text is already there). **✕ Cancel** removes the dictated text.
+
+Turn it off in **Settings → General → Live dictation into Microsoft Word**. In other programs, the
+text is pasted when you finish.
+
 ### Buttons in the dictation box
 | Button | What it does |
 |---|---|

@@ -158,6 +158,7 @@ class App:
         self._session_hotkeys = []
         self.recorder_tap = None          # set by the voice-training window to receive mic audio
         self._train_win = None
+        self.word = None                  # live link to a Word document while dictating into Word
 
         # ---- overlay
         self.root = tk.Tk()
@@ -766,13 +767,23 @@ class App:
         try:
             if not self.active:
                 self.mic_acquire("dictation")
+                self.word = None
+                if self.cfg.get("live_word", True) and self.cfg["insert"] == "on_stop":
+                    from wordsync import WordSync, word_is_in_front
+                    if word_is_in_front():
+                        link = WordSync(self._word_edited, log_error)
+                        if link.start():
+                            self.word = link
+                        else:
+                            log_error(link.error)
                 self.active = True
                 self.engine.start()
                 self._add_session_hotkeys()
                 self.tray.icon = tray_image("active")
                 if self.cfg["beep"]:
                     beep(880)
-                self.ui_q.put(("show", "● Listening… speak Amharic", ""))
+                self.ui_q.put(("show", "● Listening… speak Amharic" +
+                               ("   ·   live in Word" if self.word else ""), ""))
                 self.ui_q.put(("bar", True))
             else:
                 self.active = False
@@ -781,6 +792,14 @@ class App:
                 self.ui_q.put(("status", "Discarding…" if discard else "Finishing…"))
                 text = self.engine.stop()
                 self.mic_release("dictation")
+                link, self.word = self.word, None
+                in_document = False
+                if link is not None:
+                    if discard:
+                        link.cancel()
+                    else:
+                        text = link.finish(text)       # Word's version, including any edits made there
+                        in_document = True
                 self.tray.icon = tray_image("ready")
                 if self.cfg["beep"]:
                     beep(520)
@@ -790,7 +809,7 @@ class App:
                     self.ui_q.put(("hide_after", 1200))
                 else:
                     self._learn_from_session(text)
-                    self._deliver(text)
+                    self._deliver(text, in_document)
         except Exception as e:
             log_error(traceback.format_exc())
             self.active = False
@@ -802,7 +821,19 @@ class App:
         finally:
             self._toggle_lock.release()
 
-    def _deliver(self, text: str):
+    def _word_edited(self, text: str):
+        """Called from the Word link when the dictated text was edited directly in Word."""
+        if self.engine and self.active and self.engine.set_document_text(text):
+            self.ui_q.put(("status", "Updated from your edit in Word"))
+
+    def _deliver(self, text: str, in_document: bool = False):
+        if in_document:                       # live in Word: the text is already there
+            if self.cfg["save_history"] and text:
+                with open(app_dir() / "history.txt", "a", encoding="utf-8") as f:
+                    f.write(time.strftime("[%Y-%m-%d %H:%M] ") + text.replace("\n", " ⏎ ") + "\n")
+            self.ui_q.put(("status", "Done — your text is in Word"))
+            self.ui_q.put(("hide_after", 900))
+            return
         if not text:
             self.ui_q.put(("show", "No speech detected — check the microphone in Windows sound settings", ""))
             self.ui_q.put(("hide_after", 2500))
@@ -825,6 +856,9 @@ class App:
 
     def _on_partial(self, text: str):
         self.ui_q.put(("text", text))
+        link = self.word
+        if link is not None and self.engine:
+            link.update(self.engine.document_text())
 
     def _on_phrase(self, phrase: str):
         if self.cfg["insert"] == "per_phrase":
@@ -1038,7 +1072,7 @@ def selftest(out_path: str) -> int:
     lines, code = [], 0
     for mod in ("numpy", "torch", "sounddevice", "keyboard", "pyperclip", "pystray", "PIL",
                 "huggingface_hub", "engine", "textproc", "settings_ui", "lmdecode", "voiceprofile",
-                "voice_training", "train_local", "learning"):
+                "voice_training", "train_local", "learning", "wordsync", "win32com.client", "pythoncom"):
         try:
             __import__(mod)
             lines.append(f"OK   {mod}")
