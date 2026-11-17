@@ -104,8 +104,34 @@ def _close(word: str, target: str) -> bool:
     return prev[-1] <= 1
 
 
+def _skel(word: str) -> str:
+    """Consonant skeleton: every Ge'ez letter reduced to its base form (ሳ→ሰ, ዘ/ዝ→ዘ, ሩ→ረ…).
+    Speech models often get the consonant right but the vowel wrong."""
+    out = []
+    for ch in word:
+        cp = ord(ch)
+        if 0x1200 <= cp <= 0x135A:
+            out.append(chr(0x1200 + (cp - 0x1200) // 8 * 8))
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+def _close_cmd(word: str, target: str) -> bool:
+    """Command-word match: one letter off, or the same consonants with different vowels."""
+    return _close(word, target) or (len(target) >= 2 and _skel(word) == _skel(target))
+
+
 def _matches(words, pattern) -> bool:
-    return len(words) == len(pattern) and all(_close(w, p) for w, p in zip(words, pattern))
+    return len(words) == len(pattern) and all(_close_cmd(w, p) for w, p in zip(words, pattern))
+
+
+def _matches_joined(word: str, pattern) -> bool:
+    """A two-word command the model wrote as one word: ድርብሳረዝ, ነጠላሰረዝ, አራትነጥብ…"""
+    if len(pattern) < 2:
+        return False
+    joined = "".join(pattern)
+    return (len(joined) >= 5 and _close(word, joined)) or _skel(word) == _skel(joined)
 
 
 _FOUR_RE = re.compile(r"4(ራት|ት)?")       # the model sometimes writes አራት as "4", "4ት" or "4ራት"
@@ -127,7 +153,7 @@ def _is_four(w: str) -> bool:
 
 def _is_stop(w: str) -> bool:
     fw = fold(w.rstrip("።"))
-    return fw in _STOPISH or _close(fw, fold("ነጥብ"))
+    return fw in _STOPISH or _close_cmd(fw, fold("ነጥብ"))
 
 
 _SEMI_FIRST = {fold(x) for x in ("ድርብ", "ድብ", "ድ", "ድር", "ድርቡ")}
@@ -136,7 +162,7 @@ _COMMA_FIRST = {fold(x) for x in ("ነጠላ", "ጠላ", "ነጠ", "ነጣላ")}
 
 def _is_sereze(w: str) -> bool:
     fw = fold(w)
-    return _close(fw, fold("ሰረዝ")) or fw in {fold("ረዝ"), fold("ሰረ"), fold("ሳረዝ"), fold("ሳረስ")}
+    return _close_cmd(fw, fold("ሰረዝ")) or fw in {fold("ረዝ"), fold("ሰረ"), fold("ሳረዝ"), fold("ሳረስ")}
 
 
 def apply_commands(text: str) -> str:
@@ -164,7 +190,12 @@ def apply_commands(text: str) -> str:
                 i += n
                 break
         else:
-            out.append(words[i])
+            for pattern, symbol in _COMMANDS:
+                if _matches_joined(folded[i], pattern):
+                    out.append(symbol)
+                    break
+            else:
+                out.append(words[i])
             i += 1
     return join_tokens(out)
 
@@ -345,6 +376,12 @@ def finish_phrase(text: str, cfg: dict) -> str:
     text = re.sub(r"(?:^|(?<=\s))(?:4|አ|አራ|አራት)\s*።", " አራት ነጥብ ", text).strip()
     if cfg.get("voice_commands", True) and len(text.split()) > 1:
         text = _TRAILING_FOUR_RE.sub(" አራት ነጥብ", text).strip()
+    if cfg.get("voice_commands", True) and len(text.split()) == 1:
+        w = text.strip()
+        fw = fold(w)
+        if fw != fold("አ") and (_FOUR_RE.fullmatch(w) or _close_cmd(fw, fold("አራት")) or fw == fold("አራ")
+                                or fw in _STOPISH - {fold("ብ")} or _close_cmd(fw, fold("ነጥብ"))):
+            text = "አራት ነጥብ"           # "አራት … ነጥብ" said with a pause in the middle
     if not cfg.get("model_punctuation", False):
         # the model guesses ። etc. on its own; by default only spoken commands add punctuation
         text = _SPACE_RE.sub(" ", _MODEL_PUNCT_RE.sub(" ", text)).strip()
