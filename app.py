@@ -905,6 +905,19 @@ def selftest(out_path: str) -> int:
         lines.append("OK   transformers CTC classes")
     except Exception as e:
         lines.append(f"FAIL transformers: {e}"); code = 1
+    from config import bundled_model_dir
+    bundled = bundled_model_dir()
+    if bundled:                                   # installer builds: the built-in model must load and run
+        try:
+            import numpy as np
+            from engine import Transcriber
+            tr = Transcriber(bundled, "cpu", False, use_lm=True)
+            tr(np.zeros(16000, dtype=np.float32))
+            lines.append(f"OK   built-in model ({bundled})")
+        except Exception as e:
+            lines.append(f"FAIL built-in model: {e}"); code = 1
+    else:
+        lines.append("--   no built-in model in this build")
     from textproc import finish_phrase
     ok = finish_phrase("ሁለት መቶ ሰዎች አራት ነጥብ", {}) == "200 ሰዎች።"
     lines.append(("OK" if ok else "FAIL") + "   text processing"); code |= (not ok)
