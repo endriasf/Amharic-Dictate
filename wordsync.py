@@ -49,6 +49,8 @@ class WordSync:
         self._ready = threading.Event()
         self.ok = False
         self.error = ""
+        self._away = False
+        self._hold = False                     # while switching to a new spot: ignore box updates
         self._thread = threading.Thread(target=self._run, daemon=True)
 
     # ---------------- called from the app
@@ -59,8 +61,27 @@ class WordSync:
 
     def update(self, text: str):
         """The dictation box changed: make Word show the same text (latest request wins)."""
-        if self.ok:
+        if self.ok and not self._hold:
             self._jobs.put(("sync", text))
+
+    def hold(self, on: bool):
+        self._hold = on
+
+    @property
+    def cursor_away(self) -> bool:
+        """The person clicked or typed somewhere else in Word since the last dictated words."""
+        return self._away
+
+    def new_passage(self, timeout=3.0) -> bool:
+        """Continue dictating at Word's current cursor; the previous passage stays as normal text."""
+        if not self.ok:
+            return False
+        done = queue.Queue()
+        self._jobs.put(("move", done))
+        try:
+            return done.get(timeout=timeout)
+        except queue.Empty:
+            return False
 
     def finish(self, text: str, timeout=5.0) -> str:
         """Final sync; returns the text as it stands in Word (including the person's own edits)."""
@@ -96,18 +117,14 @@ class WordSync:
         try:
             if self._doc_override is not None:
                 self.doc = self._doc_override
+                self.app = self.doc.Application
                 pos = self.doc.Content.End - 1
             else:
                 import win32com.client
-                word = win32com.client.GetActiveObject("Word.Application")
-                self.doc = word.ActiveDocument
-                sel = word.Selection
-                pos = sel.End                       # never overwrite selected text: dictate after it
-            prev = self.doc.Range(pos - 1, pos).Text if pos > 0 else ""
-            self.lead = " " if prev and prev not in " \r\n\t\x0b(«" else ""
-            self.start = pos
-            self.rng = self.doc.Range(pos, pos)
-            self.shown = ""                         # what we last put in Word (in Word form)
+                self.app = win32com.client.GetActiveObject("Word.Application")
+                self.doc = self.app.ActiveDocument
+                pos = self.app.Selection.End         # never overwrite selected text: dictate after it
+            self._begin_at(pos)
             self.ok = True
         except Exception as e:
             self.error = f"Couldn't connect to Word ({e})"
@@ -124,8 +141,35 @@ class WordSync:
             except Exception:
                 pass
 
+    def _begin_at(self, pos: int):
+        prev = self.doc.Range(pos - 1, pos).Text if pos > 0 else ""
+        self.lead = " " if prev and prev not in " \r\n\t\x0b(«" else ""
+        nxt = self.doc.Range(pos, pos + 1).Text if pos < self.doc.Content.End - 1 else ""
+        self.trail = " " if nxt and nxt not in " \r\n\t\x0b.,።፣፤፥?!)»" else ""   # dictating in front of a word
+        self.rng = self.doc.Range(pos, pos)
+        self.shown = ""                             # what we last put in Word (in Word form)
+        self._away = False
+
+    def _check_cursor(self):
+        """Is Word's cursor still at our passage? (Clicking inside the passage counts as staying.)"""
+        try:
+            sel = self.app.Selection
+            same_doc = sel.Document.FullName == self.doc.FullName
+            inside = self.rng.Start <= sel.Start and sel.End <= self.rng.End
+            self._away = not (same_doc and inside)
+        except Exception as e:
+            self.log(f"Word cursor check: {e}")
+
+    def _cursor_to_end(self):
+        """Keep Word's cursor right after the dictated words, as if they had been typed."""
+        try:
+            if not self._away and self.app.Selection.Document.FullName == self.doc.FullName:
+                self.app.Selection.SetRange(self.rng.End, self.rng.End)
+        except Exception as e:
+            self.log(f"Word cursor: {e}")
+
     def _word_text(self, text: str) -> str:
-        return (self.lead + _to_word(text)) if text else ""
+        return (self.lead + _to_word(text) + self.trail) if text else ""
 
     def _current(self) -> str:
         return self.rng.Text or ""
@@ -150,8 +194,16 @@ class WordSync:
                     except queue.Empty:
                         break
                 final = [j for j in pending if j[0] in ("finish", "cancel")]
+                moves = [j for j in pending if j[0] == "move"]
                 syncs = [j for j in pending if j[0] == "sync"]
                 try:
+                    if moves:                       # new passage at the cursor (any older syncs are stale)
+                        sel = self.app.Selection
+                        self.doc = sel.Document
+                        self._begin_at(sel.End)
+                        for j in moves:
+                            j[1].put(True)
+                        syncs = [j for j in syncs if pending.index(j) > pending.index(moves[-1])]
                     if syncs:
                         self._apply(syncs[-1][1])
                     if final:
@@ -170,7 +222,8 @@ class WordSync:
                     if final:
                         return
                 continue
-            # no request: did the person edit the dictated text in Word?
+            # no request: did the person edit the dictated text in Word, or move the cursor away?
+            self._check_cursor()
             try:
                 cur = self._current()
                 if cur != self.shown:
@@ -198,6 +251,8 @@ class WordSync:
             s += 1
         start = self.rng.Start
         part = self.doc.Range(start + p, start + len(cur) - s)
+        self._check_cursor()                       # where is the person's cursor before we type?
         part.Text = new[p:len(new) - s]
         self.rng = self.doc.Range(start, start + len(new))
         self.shown = self._current()
+        self._cursor_to_end()

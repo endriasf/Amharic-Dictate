@@ -159,6 +159,7 @@ class App:
         self.recorder_tap = None          # set by the voice-training window to receive mic audio
         self._train_win = None
         self.word = None                  # live link to a Word document while dictating into Word
+        self._moving = False
 
         # ---- overlay
         self.root = tk.Tk()
@@ -777,6 +778,7 @@ class App:
                         else:
                             log_error(link.error)
                 self.active = True
+                self.engine.on_speech_start = self._speech_started if self.word else None
                 self.engine.start()
                 self._add_session_hotkeys()
                 self.tray.icon = tray_image("active")
@@ -820,6 +822,33 @@ class App:
             self.ui_q.put(("show", f"Error: {e}", "Details are in the log (tray → Open log)."))
         finally:
             self._toggle_lock.release()
+
+    def _speech_started(self):
+        """Follow the cursor: if you clicked elsewhere in Word, the next words go there."""
+        link = self.word
+        if link is None or not link.cursor_away or not self.engine:
+            return
+        threading.Thread(target=self._move_to_cursor, args=(link,), daemon=True).start()
+
+    def _move_to_cursor(self, link):
+        if self._moving or self.engine.replacing:        # busy, or in the middle of a correction in the box
+            return
+        self._moving = True
+        try:
+            previous = self.engine.document_text()
+            link.hold(True)                              # nothing may be written while we switch spots
+            try:
+                if not self.engine.start_new_passage():
+                    return
+                moved = link.new_passage()
+            finally:
+                link.hold(False)
+            link.update(self.engine.document_text())
+            self._learn_from_session(previous)          # the finished passage (if learning is on)
+            if moved:
+                self.ui_q.put(("status", "● Continuing at your new spot in Word"))
+        finally:
+            self._moving = False
 
     def _word_edited(self, text: str):
         """Called from the Word link when the dictated text was edited directly in Word."""

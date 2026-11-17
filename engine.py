@@ -205,6 +205,7 @@ class DictationEngine:
         self.cfg = cfg
         self.on_partial = on_partial
         self.on_phrase = on_phrase
+        self.on_speech_start = None
         self.q: "queue.Queue[np.ndarray]" = queue.Queue()
         self.running = False
         self.committed: list[str] = []
@@ -306,6 +307,16 @@ class DictationEngine:
             if self._after:
                 parts.append(self._after)
             return join_phrases(parts).strip(" ")
+
+    def start_new_passage(self) -> bool:
+        """Begin a fresh passage (the previous text stays in the document). Not while a word is selected."""
+        with self._lock:
+            if self._replacing:
+                return False
+            self.committed = []
+            self._history.clear()
+        self._refresh()
+        return True
 
     def set_document_text(self, text: str) -> bool:
         """The person edited the text in the document itself: adopt it (Undo can bring the old text back)."""
@@ -725,6 +736,11 @@ class DictationEngine:
                 phrase = pre_roll + [block]
                 self._in_phrase = True
                 quiet = 0
+                if self.on_speech_start:
+                    try:
+                        self.on_speech_start()        # e.g. the Word cursor moved: start a new passage there
+                    except Exception:
+                        pass
             else:
                 pre_roll = (pre_roll + [block])[-5:]   # keep 500 ms before speech starts
 

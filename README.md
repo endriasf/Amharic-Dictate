@@ -55,6 +55,9 @@ document** as you speak, at the cursor:
   update the document immediately.
 - You can also edit the dictated text **directly in Word**; the dictation box updates to match.
 - Typing anywhere else in the document is never touched.
+- Word's cursor follows your words, as if you were typing. **Click somewhere else** in the
+  document (or type there) and keep talking: the next words go **at the new spot**, and the box
+  starts fresh for that passage. Clicking inside the passage you are dictating keeps it as one.
 - **✓ Done** simply finishes (the text is already there). **✕ Cancel** removes the dictated text.
 
 Turn it off in **Settings → General → Live dictation into Microsoft Word**. In other programs, the
