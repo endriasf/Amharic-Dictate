@@ -10,6 +10,5 @@ It includes or uses the following works, each under its own licence:
 | — WAXAL Amharic speech data | Google Research & partners (Amharic: Digital Umuganda) | CC BY-SA 4.0 |
 | — FLEURS Amharic speech data | Google | CC BY 4.0 |
 | Amharic word list (amharic_words.tsv) | Leipzig Corpora Collection | CC BY 4.0 |
-| Amharic word list (amharic_words.tsv) | GNU Aspell Amharic, Daniel Yacob | public domain |
 | Reading sentences (training_sentences.txt) | Leipzig Corpora Collection, Amharic Wikipedia | CC BY 4.0 |
 | PyTorch, Hugging Face Transformers, NumPy, sounddevice, pystray, Pillow, keyboard, pyperclip | their respective authors | BSD / Apache 2.0 / MIT |

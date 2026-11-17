@@ -216,10 +216,11 @@ class App:
                 pystray.MenuItem("Delete last word", lambda: self.delete_word()),
                 pystray.MenuItem("Settings…", lambda: self.ui_q.put(("settings",))),
                 pystray.MenuItem("Voice profiles…", lambda: self.ui_q.put(("train",))),
-                pystray.MenuItem("About…", lambda: self.ui_q.put(("about",))),
                 pystray.MenuItem("Open history", lambda: self._open_file("history.txt")),
                 pystray.MenuItem("Open log", lambda: self._open_file("error.log")),
                 pystray.MenuItem(f"Quit {APP_NAME}", lambda: self.quit()),
+                pystray.Menu.SEPARATOR,
+                pystray.MenuItem("About…", lambda: self.ui_q.put(("about",))),
             ),
         )
         self.tray.run_detached()
@@ -452,12 +453,11 @@ class App:
             f"About {APP_NAME}",
             f"{APP_NAME} {APP_VERSION}\n"
             "Offline Amharic dictation for Windows.\n\n"
-            "Created by Endrias F. Abitte\n\n"
             f"{model_credit}\n\n"
-            "Amharic dictionary: Leipzig Corpora Collection (CC BY 4.0) and GNU Aspell Amharic "
-            "word list by Daniel Yacob.\n"
+            "Amharic dictionary: Leipzig Corpora Collection (CC BY 4.0).\n"
             "Reading sentences: Leipzig Corpora Collection, Amharic Wikipedia (CC BY 4.0).\n\n"
-            "Everything you dictate stays on this computer.",
+            "Everything you dictate stays on this computer.\n\n"
+            "Created by Endrias F. Abitte",
             parent=self.root)
 
     def open_training(self):

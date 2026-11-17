@@ -216,8 +216,7 @@ Everything you dictate is processed on your computer. Nothing is uploaded. Dicta
   Trained from facebook/w2v-bert-2.0 (Meta, MIT) on WAXAL Amharic speech data (Google Research and
   partners; Amharic recordings by Digital Umuganda, CC BY-SA 4.0) and FLEURS (Google, CC BY 4.0).
 - **Amharic dictionary:** Leipzig Corpora Collection (CC BY 4.0; D. Goldhahn, T. Eckart and
-  U. Quasthoff, LREC 2012) and the GNU Aspell Amharic word list by Daniel Yacob / Ge'ez Frontier
-  Foundation (public domain).
+  U. Quasthoff, LREC 2012).
 - Full list: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Developers: see [DEVELOPERS.md](DEVELOPERS.md) for running from source, building and training.
