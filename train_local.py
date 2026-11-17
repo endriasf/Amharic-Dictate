@@ -59,6 +59,26 @@ def normalize(text, vocab):
     return "".join(c for c in text if c == " " or c in vocab)
 
 
+SPOKEN_PUNCT = {"።": "አራት ነጥብ", "፣": "ነጠላ ሰረዝ", "፤": "ድርብ ሰረዝ", "?": "የጥያቄ ምልክት", "!": "ቃለ አጋኖ"}
+
+
+def spoken_versions(raw, vocab):
+    """Ways the person may have read a sentence aloud: without saying punctuation, saying every
+    mark ("አራት ነጥብ" for ።, ...), or saying only the final full stop."""
+    raw = unicodedata.normalize("NFC", raw).strip()
+    out = [normalize(raw, vocab)]
+    if any(c in raw for c in SPOKEN_PUNCT):
+        every = "".join(f" {SPOKEN_PUNCT[c]} " if c in SPOKEN_PUNCT else c for c in raw)
+        out.append(normalize(every, vocab))
+        if raw[-1:] in SPOKEN_PUNCT:
+            out.append(normalize(raw[:-1] + " " + SPOKEN_PUNCT[raw[-1]], vocab))
+    seen = []
+    for t in out:
+        if t and t not in seen:
+            seen.append(t)
+    return seen
+
+
 def edit_distance(a, b):
     prev = list(range(len(b) + 1))
     for i, x in enumerate(a, 1):
@@ -138,12 +158,42 @@ def main(argv=None):
             if name.startswith(("clip_", "corr_")) and name.endswith(".wav"):
                 txt = os.path.join(args.data, name[:-4] + ".txt")
                 if os.path.exists(txt):
-                    text = normalize(open(txt, encoding="utf-8").read(), vocab)
-                    if text:
-                        clips.append((os.path.join(args.data, name), text))
+                    versions = spoken_versions(open(txt, encoding="utf-8").read(), vocab)
+                    if versions:
+                        clips.append((os.path.join(args.data, name), versions))
         if len(clips) < 10:
             prog.update(1.0, "Not enough recordings to train (need at least 30).", done=True, ok=False)
             return 1
+
+        # ---- did the person say the punctuation ("አራት ነጥብ") while reading? Ask the standard model
+        # which version of each sentence fits the recording best. Training on the wrong version would
+        # teach the profile to write nothing when you say a punctuation word.
+        model.eval()
+        to_check = [i for i, (_, v) in enumerate(clips) if len(v) > 1]
+        spoken = 0
+        with torch.inference_mode():
+            for n, i in enumerate(to_check):
+                wav, versions = clips[i]
+                try:
+                    audio = load_wav(wav)
+                    lp = model(**processor(audio, sampling_rate=SR, return_tensors="pt")).logits.float().log_softmax(-1)
+                    T = torch.tensor([lp.shape[1]])
+                    best, best_nll = versions[0], None
+                    for v in versions:
+                        ids = processor.tokenizer(v, return_tensors="pt").input_ids
+                        nll = torch.nn.functional.ctc_loss(lp.transpose(0, 1), ids, T, torch.tensor([ids.shape[1]]),
+                                                           blank=processor.tokenizer.pad_token_id,
+                                                           reduction="sum", zero_infinity=True).item()
+                        if best_nll is None or nll < best_nll:
+                            best, best_nll = v, nll
+                    spoken += best != versions[0]
+                    clips[i] = (wav, [best])
+                except Exception:
+                    clips[i] = (wav, versions[:1])
+                prog.update(0.02 * (n + 1) / max(1, len(to_check)),
+                            f"Checking how you read punctuation ({n + 1}/{len(to_check)})")
+        clips = [(w, v[0]) for w, v in clips]
+        print(f"punctuation said aloud in {spoken} of {len(to_check)} sentences", flush=True)
         if not args.epochs:                      # small sets need more passes; big sets fewer
             args.epochs = 8 if len(clips) < 80 else 5 if len(clips) < 200 else 3
         rnd = random.Random(42)

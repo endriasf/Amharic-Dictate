@@ -150,6 +150,13 @@ class Transcriber:
         self.min_confidence = min_confidence
         self.last_greedy = ""
         self.last_confidence = 1.0
+        self.last_spot = ""
+        self.spotter = None
+        try:                                       # spoken punctuation said on its own
+            from cmdspot import CommandSpotter
+            self.spotter = CommandSpotter(self._id2tok, self._blank)
+        except Exception:
+            pass
         self.lm = None
         if use_lm:
             from lmdecode import LexiconDecoder
@@ -180,6 +187,17 @@ class Transcriber:
             top, arg = probs.max(-1)
             spoken = arg != self._blank
             self.last_confidence = float(top[spoken].mean()) if bool(spoken.any()) else 0.0
+            self.last_spot = ""
+            if self.spotter is not None and len(audio) <= SR * 3.5 and len(self.last_greedy.split()) <= 2:
+                try:
+                    from cmdspot import MAX_SECONDS
+                    from textproc import apply_commands
+                    if len(audio) <= SR * MAX_SECONDS and apply_commands(self.last_greedy) == self.last_greedy:
+                        cmd, self.last_spot = self.spotter.spot(logits[0].float().log_softmax(-1).cpu().numpy())
+                        if cmd:
+                            return cmd
+                except Exception as e:
+                    self.last_spot = f"spot error: {e}"
             if self.min_confidence and self.last_confidence < self.min_confidence:
                 return ""
             if self.lm is not None:
@@ -459,6 +477,18 @@ class DictationEngine:
             self._timings.append(f"{kind:8s} audio={len(audio)/SR:5.1f}s  took={time.perf_counter()-t0:5.2f}s  queue={self.q.qsize()}  text={text}")
         return text
 
+    def _save_short(self, audio):
+        """Diagnostics (only while decode_log.flag exists): keep the last 100 short phrases."""
+        import os, wave, glob
+        d = os.path.join(os.path.dirname(self.decode_log), "decode_audio")
+        os.makedirs(d, exist_ok=True)
+        pcm = (np.clip(audio, -1, 1) * 32767).astype("<i2")
+        with wave.open(os.path.join(d, time.strftime("%H%M%S") + f"-{int(time.time()*1000)%1000:03d}.wav"), "wb") as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR); w.writeframes(pcm.tobytes())
+        old = sorted(glob.glob(os.path.join(d, "*.wav")), key=os.path.getmtime)[:-100]
+        for f in old:
+            os.remove(f)
+
     def _save_debug(self):
         import os, wave
         os.makedirs(self.debug_dir, exist_ok=True)
@@ -580,11 +610,17 @@ class DictationEngine:
                                         f"confidence={getattr(self.transcribe, 'last_confidence', 1.0):.2f}\n"
                                         f"  preview : {preview_was}\n"
                                         f"  plain   : {getattr(self.transcribe, 'last_greedy', '')}\n"
+                                        f"  spot    : {getattr(self.transcribe, 'last_spot', '')}\n"
                                         f"  dict    : {raw}\n"
                                         f"  commands: {before_fix}\n"
                                         f"  final   : {text}\n")
                         except Exception:
                             pass
+                        if len(job[1]) <= SR * 4:              # short phrases: keep the sound to tune command spotting
+                            try:
+                                self._save_short(job[1])
+                            except Exception:
+                                pass
                     if self.learn and text and not (self._replacing and pid >= self._gap_min):
                         self._record_phrase(job[1], raw, before_fix, text)
                     with self._lock:
