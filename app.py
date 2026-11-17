@@ -1158,7 +1158,7 @@ def main():
             os.environ[var] = "1"
     if len(sys.argv) >= 2 and sys.argv[1] == "--train":       # background voice training (packaged app)
         import train_local
-        sys.exit(train_local.main(sys.argv[2:]))
+        train_local.run_and_exit(sys.argv[2:])
     if len(sys.argv) >= 3 and sys.argv[1] == "--selftest":
         sys.exit(selftest(sys.argv[2]))
     if not single_instance():

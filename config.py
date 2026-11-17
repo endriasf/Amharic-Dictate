@@ -128,3 +128,15 @@ def set_start_with_windows(enabled: bool):
                 winreg.DeleteValue(k, APP_NAME)
             except FileNotFoundError:
                 pass
+
+
+def bring_to_front(win):
+    """Open a window in front, without pinning it there: clicking another program brings that
+    program forward as usual."""
+    try:
+        win.lift()
+        win.attributes("-topmost", True)
+        win.after(400, lambda: win.winfo_exists() and win.attributes("-topmost", False))
+        win.focus_force()
+    except Exception:
+        pass

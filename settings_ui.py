@@ -3,7 +3,7 @@
 import tkinter as tk
 from tkinter import ttk
 
-from config import APP_NAME, APP_VERSION, BUNDLED_MODEL, MODEL_PRESETS, bundled_model_dir
+from config import APP_NAME, APP_VERSION, BUNDLED_MODEL, MODEL_PRESETS, bring_to_front, bundled_model_dir
 from textproc import COMMANDS
 
 INSERT_MODES = [("on_stop", "Paste when I stop"), ("per_phrase", "Type as I speak (each phrase)"),
@@ -16,7 +16,7 @@ def open_settings(root, cfg: dict, on_save):
     win = tk.Toplevel(root)
     win.title(f"{APP_NAME} settings")
     win.resizable(False, False)
-    win.attributes("-topmost", True)
+    bring_to_front(win)
     pad = {"padx": 10, "pady": 4}
 
     nb = ttk.Notebook(win)

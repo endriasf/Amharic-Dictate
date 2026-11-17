@@ -271,5 +271,20 @@ def main(argv=None):
         return 1
 
 
+def run_and_exit(argv=None):
+    """Run training, then end the process at once. Without this, background threads started by
+    torch/transformers can keep the process alive after training is done, so the app still
+    thinks it is training."""
+    try:
+        rc = main(argv)
+    except BaseException:
+        rc = 1
+    try:
+        sys.stdout.flush(); sys.stderr.flush()
+    except Exception:
+        pass
+    os._exit(rc or 0)
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    run_and_exit()

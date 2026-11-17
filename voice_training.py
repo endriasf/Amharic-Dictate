@@ -18,7 +18,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 import numpy as np
 
 import voiceprofile as vp
-from config import log_error
+from config import bring_to_front, log_error
 
 SR = 16000
 SETUP_CLIPS = 50          # Dragon-style setup reading
@@ -33,8 +33,24 @@ RUNNING = {}              # profile name -> training process (manual or automati
 def training_running(profile) -> bool:
     p = RUNNING.get(profile)
     if p is not None and p.poll() is None:
+        if _progress_done(profile):            # finished but the process hasn't closed: end it
+            try:
+                p.terminate()
+                p.wait(timeout=5)
+            except Exception:
+                pass
+            return False
         return True
+    if _progress_done(profile):
+        return False
     return _lock_held(vp.profile_dir(profile) / "training.lock")   # started elsewhere (e.g. another window)
+
+
+def _progress_done(profile) -> bool:
+    try:
+        return bool(json.loads(progress_path(profile).read_text(encoding="utf-8")).get("done"))
+    except Exception:
+        return False
 
 
 def _lock_held(path) -> bool:
@@ -123,7 +139,7 @@ class VoiceTrainingWindow:
 
         w = self.win = tk.Toplevel(self.root)
         w.title("Voice profiles")
-        w.attributes("-topmost", True)
+        bring_to_front(w)
         w.geometry("780x560")
         w.protocol("WM_DELETE_WINDOW", self.close)
         family = app.text.cget("font").split(" ")[0].strip("{}") or "Ebrima"
