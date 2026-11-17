@@ -59,24 +59,40 @@ def normalize(text, vocab):
     return "".join(c for c in text if c == " " or c in vocab)
 
 
-SPOKEN_PUNCT = {"።": "አራት ነጥብ", "፣": "ነጠላ ሰረዝ", "፤": "ድርብ ሰረዝ", "?": "የጥያቄ ምልክት", "!": "ቃለ አጋኖ"}
+SPOKEN_PUNCT = {"።": "አራት ነጥብ", "፣": "ነጠላ ሰረዝ", "፤": "ድርብ ሰረዝ", "?": "የጥያቄ ምልክት", "!": "ቃለ አጋኖ",
+                "(": "ቅንፍ ክፈት", ")": "ቅንፍ ዝጋ", "«": "ጥቅስ ክፈት", "»": "ጥቅስ ዝጋ"}
 
 
-def spoken_versions(raw, vocab):
-    """Ways the person may have read a sentence aloud: without saying punctuation, saying every
-    mark ("አራት ነጥብ" for ።, ...), or saying only the final full stop."""
-    raw = unicodedata.normalize("NFC", raw).strip()
-    out = [normalize(raw, vocab)]
-    if any(c in raw for c in SPOKEN_PUNCT):
-        every = "".join(f" {SPOKEN_PUNCT[c]} " if c in SPOKEN_PUNCT else c for c in raw)
-        out.append(normalize(every, vocab))
-        if raw[-1:] in SPOKEN_PUNCT:
-            out.append(normalize(raw[:-1] + " " + SPOKEN_PUNCT[raw[-1]], vocab))
-    seen = []
-    for t in out:
-        if t and t not in seen:
-            seen.append(t)
-    return seen
+class SpokenMarks:
+    """A reading sentence and the punctuation marks in it that have a spoken form. Each mark may or
+    may not have been said aloud ("አራት ነጥብ" for ።, "ነጠላ ሰረዝ" for ፣, ...), independently."""
+
+    def __init__(self, raw, vocab):
+        self.raw = unicodedata.normalize("NFC", raw).strip()
+        self.vocab = vocab
+        self.marks = [k for k, c in enumerate(self.raw) if c in SPOKEN_PUNCT]
+
+    def text(self, said=()):
+        said = set(said)
+        return normalize("".join(f" {SPOKEN_PUNCT[c]} " if k in said else c
+                                 for k, c in enumerate(self.raw)), self.vocab)
+
+
+def choose_spoken(sm, nll):
+    """Pick which marks were said aloud: start from none, then try saying each mark (two passes)
+    and keep the change when the recording fits better. nll(text) -> lower is a better fit."""
+    said = set()
+    best = nll(sm.text(said))
+    for _ in range(2):
+        changed = False
+        for k in sm.marks:
+            trial = said ^ {k}
+            score = nll(sm.text(trial))
+            if score < best:
+                said, best, changed = trial, score, True
+        if not changed:
+            break
+    return sm.text(said), said
 
 
 def edit_distance(a, b):
@@ -158,9 +174,9 @@ def main(argv=None):
             if name.startswith(("clip_", "corr_")) and name.endswith(".wav"):
                 txt = os.path.join(args.data, name[:-4] + ".txt")
                 if os.path.exists(txt):
-                    versions = spoken_versions(open(txt, encoding="utf-8").read(), vocab)
-                    if versions:
-                        clips.append((os.path.join(args.data, name), versions))
+                    sm = SpokenMarks(open(txt, encoding="utf-8").read(), vocab)
+                    if sm.text():
+                        clips.append((os.path.join(args.data, name), sm))
         if len(clips) < 10:
             prog.update(1.0, "Not enough recordings to train (need at least 30).", done=True, ok=False)
             return 1
@@ -169,31 +185,34 @@ def main(argv=None):
         # which version of each sentence fits the recording best. Training on the wrong version would
         # teach the profile to write nothing when you say a punctuation word.
         model.eval()
-        to_check = [i for i, (_, v) in enumerate(clips) if len(v) > 1]
-        spoken = 0
+        to_check = [i for i, (_, sm) in enumerate(clips) if sm.marks]
+        said_count, marks_count = {}, {}
         with torch.inference_mode():
             for n, i in enumerate(to_check):
-                wav, versions = clips[i]
+                wav, sm = clips[i]
                 try:
-                    audio = load_wav(wav)
-                    lp = model(**processor(audio, sampling_rate=SR, return_tensors="pt")).logits.float().log_softmax(-1)
-                    T = torch.tensor([lp.shape[1]])
-                    best, best_nll = versions[0], None
-                    for v in versions:
-                        ids = processor.tokenizer(v, return_tensors="pt").input_ids
-                        nll = torch.nn.functional.ctc_loss(lp.transpose(0, 1), ids, T, torch.tensor([ids.shape[1]]),
-                                                           blank=processor.tokenizer.pad_token_id,
-                                                           reduction="sum", zero_infinity=True).item()
-                        if best_nll is None or nll < best_nll:
-                            best, best_nll = v, nll
-                    spoken += best != versions[0]
-                    clips[i] = (wav, [best])
+                    lp = model(**processor(load_wav(wav), sampling_rate=SR, return_tensors="pt")).logits
+                    lp = lp.float().log_softmax(-1).transpose(0, 1)
+                    T = torch.tensor([lp.shape[0]])
+
+                    def nll(text):
+                        ids = processor.tokenizer(text, return_tensors="pt").input_ids
+                        return torch.nn.functional.ctc_loss(lp, ids, T, torch.tensor([ids.shape[1]]),
+                                                            blank=processor.tokenizer.pad_token_id,
+                                                            reduction="sum", zero_infinity=True).item()
+                    text, said = choose_spoken(sm, nll)
+                    for k in sm.marks:
+                        c = sm.raw[k]
+                        marks_count[c] = marks_count.get(c, 0) + 1
+                        said_count[c] = said_count.get(c, 0) + (k in said)
+                    clips[i] = (wav, text)
                 except Exception:
-                    clips[i] = (wav, versions[:1])
+                    clips[i] = (wav, sm.text())
                 prog.update(0.02 * (n + 1) / max(1, len(to_check)),
                             f"Checking how you read punctuation ({n + 1}/{len(to_check)})")
-        clips = [(w, v[0]) for w, v in clips]
-        print(f"punctuation said aloud in {spoken} of {len(to_check)} sentences", flush=True)
+        clips = [(w, t if isinstance(t, str) else t.text()) for w, t in clips]
+        print("punctuation said aloud: " + ", ".join(f"{c} {said_count[c]}/{marks_count[c]}" for c in marks_count),
+              flush=True)
         if not args.epochs:                      # small sets need more passes; big sets fewer
             args.epochs = 8 if len(clips) < 80 else 5 if len(clips) < 200 else 3
         rnd = random.Random(42)
@@ -284,7 +303,8 @@ def main(argv=None):
         summary = (f"Without profile: {base_wer:.0%} of words wrong ({base_cer:.0%} of letters).  "
                    f"With your profile: {new_wer:.0%} of words wrong ({new_cer:.0%} of letters).")
         result = {"base_wer": base_wer, "base_cer": base_cer, "new_wer": new_wer, "new_cer": new_cer,
-                  "clips": len(clips), "trained_params": n_train, "date": time.strftime("%Y-%m-%d %H:%M")}
+                  "clips": len(clips), "trained_params": n_train,
+                  "punctuation_said": {c: f"{said_count[c]}/{marks_count[c]}" for c in marks_count}, "date": time.strftime("%Y-%m-%d %H:%M")}
         if better:
             save_adapter(args.out, model, lora_names, args.base_name or args.base, result)
             if args.profile_json:
