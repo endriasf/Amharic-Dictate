@@ -37,7 +37,7 @@ pyinstaller --noconfirm --clean --windowed `
   --add-data "amharic_words.tsv;." `
   --add-data "training_sentences.txt;." `
   --hidden-import voiceprofile --hidden-import voice_training --hidden-import train_local `
-  --hidden-import learning --hidden-import lmdecode --hidden-import wordsync --hidden-import wordspell --hidden-import spell_window `
+  --hidden-import learning --hidden-import lmdecode --hidden-import wordsync `
   --hidden-import win32com.client --hidden-import pythoncom --hidden-import pywintypes `
   --exclude-module torchvision --exclude-module torchaudio `
   --exclude-module tensorflow --exclude-module jax --exclude-module flax `

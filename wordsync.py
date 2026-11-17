@@ -255,9 +255,4 @@ class WordSync:
         part.Text = new[p:len(new) - s]
         self.rng = self.doc.Range(start, start + len(new))
         self.shown = self._current()
-        try:                                       # Amharic: keep Word's English speller off it
-            from wordspell import mark_range_amharic
-            mark_range_amharic(self.rng)
-        except Exception:
-            pass
         self._cursor_to_end()
