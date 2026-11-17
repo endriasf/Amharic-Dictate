@@ -53,7 +53,7 @@ DEFAULT_CONFIG = {
     "min_threshold": 0.0012,      # quietest level treated as speech
     "beep": True,
     "font": "Nyala",
-    "font_size": 18,
+    "font_size": 15,
     "start_with_windows": False,
     "save_history": False,       # transcripts may contain sensitive information
     "profile": "",               # active voice profile (folder under %APPDATA%\\AmharicDictate\\profiles)
