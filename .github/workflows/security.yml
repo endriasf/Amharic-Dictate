@@ -30,7 +30,7 @@ jobs:
           $env:PYTHONIOENCODING = "utf-8"
           python -m pip_audit --progress-spinner off --skip-editable -f json -o audit.json
           $code = $LASTEXITCODE
-          python -c "import json; d=json.load(open('audit.json', encoding='utf-8')); [print(f\"{p['name']} {p['version']}: {v['id']} fixed in {', '.join(v.get('fix_versions') or ['(no fix yet)'])} {' '.join(v.get('aliases') or [])}\") for p in d['dependencies'] for v in p.get('vulns', [])]"
+          python tools/audit_summary.py audit.json
           exit $code
       - uses: actions/upload-artifact@v4
         if: always()
