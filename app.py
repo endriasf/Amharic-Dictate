@@ -771,8 +771,11 @@ class App:
                 self.mic_acquire("dictation")
                 self.word = None
                 if self.cfg.get("live_word", True) and self.cfg["insert"] == "on_stop":
-                    from wordsync import WordSync, word_is_in_front
-                    if word_is_in_front():
+                    from wordsync import WordSync, front_window_class, WORD_WINDOW_CLASS
+                    front = front_window_class()
+                    if front != WORD_WINDOW_CLASS:
+                        log_error(f"Live Word: not used, the window in front is '{front}'")
+                    else:
                         link = WordSync(self._word_edited, log_error)
                         if link.start():
                             self.word = link

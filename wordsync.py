@@ -11,23 +11,54 @@ Uses Word's own automation interface (COM) on this computer only. All Word calls
 background thread, as COM requires.
 """
 
+import os
 import queue
 import threading
 import time
 
 WORD_WINDOW_CLASS = "OpusApp"          # Word's main window
+# Windows' own taskbar, tray, hidden-icons flyout, menus and desktop: never the program you're working in
+_SHELL_CLASSES = {"Shell_TrayWnd", "Shell_SecondaryTrayWnd", "NotifyIconOverflowWindow",
+                  "TopLevelWindowForOverflowXamlIsland", "XamlExplorerHostIslandWindow",
+                  "Windows.UI.Core.CoreWindow", "#32768", "Progman", "WorkerW", "tooltips_class32"}
+
+
+def front_window_class() -> str:
+    """Class name of the program window in front. If that is Amharic Dictate itself (its dictation
+    box, tray menu or a button just clicked), the program window right behind it counts."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        u = ctypes.windll.user32
+        me = os.getpid()
+
+        def info(hwnd):
+            pid = wintypes.DWORD()
+            u.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            buf = ctypes.create_unicode_buffer(64)
+            u.GetClassNameW(hwnd, buf, 64)
+            return pid.value, buf.value
+
+        hwnd = u.GetForegroundWindow()
+        pid, cls = info(hwnd)
+        if pid != me and cls not in _SHELL_CLASSES:
+            return cls
+        hwnd = u.GetTopWindow(None)                # walk the windows from front to back
+        for _ in range(500):
+            if not hwnd:
+                break
+            if u.IsWindowVisible(hwnd) and not u.IsIconic(hwnd) and u.GetWindowTextLengthW(hwnd) > 0:
+                pid, cls = info(hwnd)
+                if pid != me and cls not in _SHELL_CLASSES:
+                    return cls
+            hwnd = u.GetWindow(hwnd, 2)            # GW_HWNDNEXT
+        return ""
+    except Exception:
+        return ""
 
 
 def word_is_in_front() -> bool:
-    try:
-        import ctypes
-        u = ctypes.windll.user32
-        hwnd = u.GetForegroundWindow()
-        buf = ctypes.create_unicode_buffer(64)
-        u.GetClassNameW(hwnd, buf, 64)
-        return buf.value == WORD_WINDOW_CLASS
-    except Exception:
-        return False
+    return front_window_class() == WORD_WINDOW_CLASS
 
 
 def _to_word(text: str) -> str:
