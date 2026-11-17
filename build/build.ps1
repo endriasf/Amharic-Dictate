@@ -22,8 +22,10 @@ if ($env:MODEL_SOURCE) {
   Write-Host "No MODEL_SOURCE set: the app will download its model on first launch"
 }
 
-$meta = "transformers","tokenizers","huggingface-hub","safetensors","regex","requests",
+$meta = "transformers","tokenizers","huggingface-hub","safetensors","regex","requests","httpx",
         "packaging","filelock","numpy","tqdm","pyyaml","torch"
+# only packages that are actually installed (library versions change which ones are needed)
+$meta = $meta | Where-Object { python -c "import importlib.metadata as m; m.distribution('$_')" 2>$null; $LASTEXITCODE -eq 0 }
 $metaArgs = $meta | ForEach-Object { "--copy-metadata"; $_ }
 
 pyinstaller --noconfirm --clean --windowed `
@@ -40,6 +42,7 @@ pyinstaller --noconfirm --clean --windowed `
   --exclude-module tensorflow --exclude-module jax --exclude-module flax `
   @metaArgs @modelArgs `
   app.py
+if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
 
 # Smoke test the frozen app
 $report = Join-Path $env:TEMP "amharicdictate-selftest.txt"
