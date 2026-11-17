@@ -173,6 +173,12 @@ class App:
         top.pack(fill="x")
         self.status = tk.Label(top, text="", fg="#9aa0a6", bg=bg, font=("Segoe UI", 9), anchor="w")
         self.status.pack(side="left", fill="x", expand=True)
+        mini_btn = tk.Label(top, text="—", fg="#c8c8c8", bg="#3a3a3a", font=("Segoe UI", 10, "bold"),
+                            padx=9, pady=0, cursor="hand2")
+        mini_btn.pack(side="right", padx=(10, 0))
+        mini_btn.bind("<Button-1>", lambda e: self.minimize())
+        mini_btn.bind("<Enter>", lambda e: mini_btn.config(bg="#555"))
+        mini_btn.bind("<Leave>", lambda e: mini_btn.config(bg="#3a3a3a"))
         self.meter = tk.Canvas(top, width=80, height=8, bg="#333", highlightthickness=0)
         self.meter.pack(side="right")
         self.meter_bar = self.meter.create_rectangle(0, 0, 0, 8, fill="#3ddc84", width=0)
@@ -252,6 +258,7 @@ class App:
         self._place_overlay()
         self.root.update_idletasks()
         make_no_activate(self.root)
+        self._build_mini(bg)
 
         # ---- tray
         import pystray
@@ -260,6 +267,7 @@ class App:
             menu=pystray.Menu(
                 pystray.MenuItem("Start / stop dictation", lambda: self.toggle(), default=True),
                 pystray.MenuItem("Pause / resume", lambda: self.toggle_pause()),
+                pystray.MenuItem("Show dictation box", lambda: self.ui_q.put(("restore",))),
                 pystray.MenuItem("Delete last word", lambda: self.delete_word()),
                 pystray.MenuItem("Settings…", lambda: self.ui_q.put(("settings",))),
                 pystray.MenuItem("Voice profiles…", lambda: self.ui_q.put(("train",))),
@@ -296,6 +304,64 @@ class App:
     def _drag_move(self, e):
         dx, dy = self._drag
         self.root.geometry(f"+{e.x_root - dx}+{e.y_root - dy}")
+
+    # ---------- minimize to a small bar (dictation keeps going, nothing is lost)
+    def _build_mini(self, bg):
+        self._minimized = False
+        m = self.mini = tk.Toplevel(self.root)
+        m.overrideredirect(True)
+        m.attributes("-topmost", True)
+        m.attributes("-alpha", 0.94)
+        m.configure(bg=bg)
+        box = tk.Frame(m, bg=bg, padx=10, pady=6)
+        box.pack(fill="both", expand=True)
+        self.mini_status = tk.Label(box, text="", fg="white", bg=bg, font=("Segoe UI", 10), anchor="w",
+                                    cursor="fleur")
+        self.mini_status.pack(side="left", padx=(0, 10))
+        for label, cmd in (("⏸", self.toggle_pause), ("⤢ Show", self.restore), ("✓ Done", self.toggle)):
+            b = tk.Label(box, text=label, fg="white", bg="#1f6f4a" if "Done" in label else "#3a3a3a",
+                         font=("Segoe UI", 10), padx=8, pady=2, cursor="hand2")
+            b.pack(side="left", padx=(0, 4))
+            b.bind("<Button-1>", lambda e, c=cmd: c())
+            if label == "⏸":
+                self.mini_pause = b
+        for w in (self.mini_status, box):            # drag the bar anywhere
+            w.bind("<ButtonPress-1>", lambda e: setattr(self, "_mini_drag", (e.x_root - m.winfo_x(), e.y_root - m.winfo_y())))
+            w.bind("<B1-Motion>", lambda e: m.geometry(f"+{e.x_root - self._mini_drag[0]}+{e.y_root - self._mini_drag[1]}"))
+        m.update_idletasks()
+        sw, sh = m.winfo_screenwidth(), m.winfo_screenheight()
+        m.geometry(f"+{sw - m.winfo_reqwidth() - 380}+{sh - m.winfo_reqheight() - 70}")
+        m.withdraw()
+        make_no_activate(m)
+
+    def _update_mini(self):
+        if not self._minimized:
+            return
+        paused = bool(self.engine and self.engine.paused)
+        words = len((self.engine.committed_text() if self.engine else "").split())
+        state = "⏸ Paused" if paused else ("● Listening" if self.active else "Amharic Dictate")
+        self.mini_status.config(text=f"{state}  ·  {words} words", fg="#ffcc66" if paused else "#ff6b6b" if self.active else "white")
+        self.mini_pause.config(text="▶" if paused else "⏸")
+
+    def minimize(self):
+        if not self.active:
+            self.root.withdraw()
+            return
+        self._minimized = True
+        self.root.withdraw()
+        self._update_mini()
+        self.mini.deiconify()
+        self.mini.lift()
+
+    def restore(self):
+        if not self._minimized:
+            if self.active:
+                self.root.deiconify(); self.root.lift()
+            return
+        self._minimized = False
+        self.mini.withdraw()
+        self.root.deiconify()
+        self.root.lift()
 
     def _place_overlay(self):
         w, h = 860, 280
@@ -912,10 +978,16 @@ class App:
                 msg = self.ui_q.get_nowait()
                 kind = msg[0]
                 if kind == "show":
-                    self._show(msg[1], msg[2])
+                    if self._minimized and self.active:
+                        self.status.config(text=msg[1])
+                    else:
+                        self._show(msg[1], msg[2])
                 elif kind == "status":
                     self.status.config(text=msg[1])
-                    self.root.deiconify()
+                    if not self._minimized:
+                        self.root.deiconify()
+                elif kind == "restore":
+                    self.restore()
                 elif kind == "text":
                     self._set_text(msg[1])
                 elif kind == "hide_after":
@@ -929,6 +1001,9 @@ class App:
                 elif kind == "about":
                     self.show_about()
                 elif kind == "bar":
+                    if not msg[1] and self._minimized:          # dictation finished: back to normal
+                        self._minimized = False
+                        self.mini.withdraw()
                     if msg[1]:
                         self.buttons["pause"].config(text="⏸  Pause")
                         self.bar.pack(fill="x", pady=(6, 0))
@@ -941,6 +1016,7 @@ class App:
         if self.sugg.winfo_ismapped() and not (self.engine and self.active and self.engine.replacing):
             self.sugg.pack_forget()
         self._check_profile_update()
+        self._update_mini()
         level = self.engine.level if (self.engine and self.active) else 0.0
         self.meter.coords(self.meter_bar, 0, 0, min(80, int(level * 1600)), 8)
         self.root.after(50, self._pump_ui)
