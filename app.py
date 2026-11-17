@@ -309,6 +309,7 @@ class App:
 
     # ---------- minimize to a small bar (dictation keeps going, nothing is lost)
     def _build_mini(self, bg):
+        import tkinter as tk
         self._minimized = False
         m = self.mini = tk.Toplevel(self.root)
         m.overrideredirect(True)
