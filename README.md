@@ -62,6 +62,18 @@ document** as you speak, at the cursor:
 Turn it off in **Settings → General → Live dictation into Microsoft Word**. In other programs, the
 text is pasted when you finish.
 
+### Amharic spelling in Word
+Word has no Amharic spell checker, so it underlines every Amharic word in red. Amharic Dictate
+fixes that:
+- Text it dictates into Word is marked as Amharic, so Word doesn't underline it.
+- For other Amharic text (typed or pasted), right-click the tray icon → **Check Amharic spelling in
+  Word…**. Select part of the document first to check only that part.
+  - **Remove Word's red lines from Amharic text** stops Word underlining the Amharic words.
+    English text is still spell-checked by Word as usual.
+  - The list shows Amharic words that aren't in the app's dictionary or your **My words**. Pick
+    one to see it in the document, then choose a suggestion (or type the right word) and click
+    **Change all**, or click **Ignore** or **★ Add to My words**.
+
 ### Buttons in the dictation box
 | Button | What it does |
 |---|---|

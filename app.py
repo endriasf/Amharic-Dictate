@@ -273,6 +273,7 @@ class App:
                 pystray.MenuItem("Delete last word", lambda: self.delete_word()),
                 pystray.MenuItem("Settings…", lambda: self.ui_q.put(("settings",))),
                 pystray.MenuItem("Voice profiles…", lambda: self.ui_q.put(("train",))),
+                pystray.MenuItem("Check Amharic spelling in Word…", lambda: self.ui_q.put(("spell",))),
                 pystray.MenuItem("Open history", lambda: self._open_file("history.txt")),
                 pystray.MenuItem("Open log", lambda: self._open_file("error.log")),
                 pystray.MenuItem(f"Quit {APP_NAME}", lambda: self.quit()),
@@ -591,6 +592,19 @@ class App:
             "Everything you dictate stays on this computer.\n\n"
             "Created by Endrias F. Abitte",
             parent=self.root)
+
+    def open_spelling(self):
+        try:
+            from spell_window import SpellWindow
+            if getattr(self, "_spell_win", None) is not None and self._spell_win.win.winfo_exists():
+                self._spell_win.win.lift()
+                self._spell_win.scan()
+                return
+            self._spell_win = SpellWindow(self)
+        except Exception as e:
+            log_error(traceback.format_exc())
+            from tkinter import messagebox
+            messagebox.showerror(APP_NAME, f"Amharic spelling for Word isn't available: {e}", parent=self.root)
 
     def open_training(self):
         from voice_training import VoiceTrainingWindow
@@ -1064,6 +1078,8 @@ class App:
                     self.open_training()
                 elif kind == "about":
                     self.show_about()
+                elif kind == "spell":
+                    self.open_spelling()
                 elif kind == "bar":
                     if not msg[1] and self._minimized:          # dictation finished: back to normal
                         self._minimized = False
@@ -1102,7 +1118,7 @@ def selftest(out_path: str) -> int:
     lines, code = [], 0
     for mod in ("numpy", "torch", "sounddevice", "keyboard", "pyperclip", "pystray", "PIL",
                 "huggingface_hub", "engine", "textproc", "settings_ui", "lmdecode", "voiceprofile",
-                "voice_training", "train_local", "learning", "wordsync", "win32com.client", "pythoncom"):
+                "voice_training", "train_local", "learning", "wordsync", "wordspell", "spell_window", "win32com.client", "pythoncom"):
         try:
             __import__(mod)
             lines.append(f"OK   {mod}")
