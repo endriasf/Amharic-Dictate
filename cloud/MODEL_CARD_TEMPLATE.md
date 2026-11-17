@@ -19,7 +19,6 @@ Amharic speech-to-text model (CTC) used by **Amharic Dictate**, an offline Amhar
 **Trained by Endrias F. Abitte**, 2026.
 
 ## Results
-<!-- filled in from the training log / comparison -->
 Raw model output (greedy CTC decoding, no dictionary or language model):
 
 | Test set | Clips | Hours | Word error rate | Character error rate |
