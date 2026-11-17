@@ -1,7 +1,7 @@
 # Third-party notices
 
-Amharic Dictate is created by **Endrias F. Abitte** (MIT licence, see LICENSE).
-It includes or uses the following works, each under its own licence:
+Amharic Dictate (MIT licence, see LICENSE) includes or uses the following works, each under its own
+licence:
 
 | Component | Author / source | Licence |
 |---|---|---|

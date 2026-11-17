@@ -1,7 +1,6 @@
 # Amharic Dictate — developer guide
 
-Amharic Dictate is created by **Endrias F. Abitte** (MIT licence). Please keep the credit in copies
-and derived work.
+MIT licence (see LICENSE).
 
 ## Run from source (Windows)
 ```

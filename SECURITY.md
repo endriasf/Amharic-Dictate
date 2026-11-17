@@ -26,4 +26,3 @@ and compare with `SHA256SUMS.txt` on the release page.
 Please report security issues privately through GitHub: the repository's **Security** tab →
 **Report a vulnerability**. Please don't open a public issue for security problems.
 
-Maintainer: Endrias F. Abitte

@@ -113,7 +113,7 @@ def open_settings(root, cfg: dict, on_save):
     # ---- Model
     m = ttk.Frame(nb); nb.add(m, text="Speech model")
     if bundled_model_dir():      # released app: only the built-in model is offered
-        presets = [(BUNDLED_MODEL, "Amharic Speech-to-Text EFA (built in) — by Endrias F. Abitte")]
+        presets = [(BUNDLED_MODEL, "Amharic Speech-to-Text EFA (built in)")]
     else:                        # running from source
         presets = list(MODEL_PRESETS)
     if cfg["model"] not in dict(presets):

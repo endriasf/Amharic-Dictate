@@ -578,8 +578,8 @@ class App:
             model_credit = ("Speech model: Ethio-ASR (Amharic) by badrex, CC BY-NC 4.0 — "
                             "free, non-commercial use only.")
         else:
-            model_credit = (f"Speech model: {model}\nTrained by Endrias F. Abitte from facebook/w2v-bert-2.0 (MIT) "
-                            "on WAXAL (Google & partners) and FLEURS (Google) Amharic speech data, CC BY-SA 4.0.")
+            model_credit = (f"Speech model: {model}, CC BY-SA 4.0 — based on facebook/w2v-bert-2.0 (MIT), "
+                            "trained on WAXAL (Google & partners) and FLEURS (Google) Amharic speech data.")
         messagebox.showinfo(
             f"About {APP_NAME}",
             f"{APP_NAME} {APP_VERSION}\n"

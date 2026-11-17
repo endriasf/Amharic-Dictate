@@ -55,7 +55,7 @@ commands, spell-check and per-user voice profiles.
 
 ## Licence
 CC BY-SA 4.0. You may use, share and adapt this model, including commercially, if you credit
-**Endrias F. Abitte** and share adaptations under the same licence.
+the author and share adaptations under the same licence.
 
 ## How to cite
 Endrias F. Abitte (2026). *Amharic Speech-to-Text EFA v1* [speech recognition model]. Hugging Face.

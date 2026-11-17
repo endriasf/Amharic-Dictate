@@ -3,8 +3,7 @@
 **Free, offline Amharic dictation for Windows.** Speak Amharic and your words appear as text in
 Word, Outlook, Teams, your browser or any other program.
 
-**Created by Endrias F. Abitte.** Free and open source. If you share or build on it, please keep the
-credit: *Amharic Dictate by Endrias F. Abitte*.
+Free and open source.
 
 - **Works offline:** everything runs on your computer. Nothing you say is sent anywhere.
 - **Built-in speech model:** *Amharic Speech-to-Text EFA v1*, included in the installer.
@@ -226,8 +225,8 @@ Everything you dictate is processed on your computer. Nothing is uploaded. Dicta
 
 ## Licence and credits
 
-- **App:** MIT licence, © 2026 **Endrias F. Abitte** (see [LICENSE](LICENSE)).
-- **Built-in speech model:** *Amharic Speech-to-Text EFA v1* by **Endrias F. Abitte**, CC BY-SA 4.0.
+- **App and built-in speech model:** © 2026 Endrias F. Abitte. App under the MIT licence
+  (see [LICENSE](LICENSE)); speech model *Amharic Speech-to-Text EFA v1* under CC BY-SA 4.0.
   Trained from facebook/w2v-bert-2.0 (Meta, MIT) on WAXAL Amharic speech data (Google Research and
   partners; Amharic recordings by Digital Umuganda, CC BY-SA 4.0) and FLEURS (Google, CC BY 4.0).
 - **Amharic dictionary:** Leipzig Corpora Collection (CC BY 4.0; D. Goldhahn, T. Eckart and
