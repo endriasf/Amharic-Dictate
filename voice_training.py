@@ -32,7 +32,25 @@ RUNNING = {}              # profile name -> training process (manual or automati
 
 def training_running(profile) -> bool:
     p = RUNNING.get(profile)
-    return p is not None and p.poll() is None
+    if p is not None and p.poll() is None:
+        return True
+    return _lock_held(vp.profile_dir(profile) / "training.lock")   # started elsewhere (e.g. another window)
+
+
+def _lock_held(path) -> bool:
+    if not path.exists():
+        return False
+    try:
+        with open(path, "a+") as f:
+            if os.name == "nt":
+                import msvcrt
+                f.seek(0)
+                msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+                f.seek(0)
+                msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+        return False
+    except OSError:
+        return True
 
 
 def progress_path(profile):

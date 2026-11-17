@@ -35,9 +35,15 @@ class Progress:
         data = {"fraction": max(0.0, min(1.0, fraction)), "message": message, "done": done,
                 "elapsed_s": round(time.time() - self.t0), **extra}
         tmp = self.path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False)
-        os.replace(tmp, self.path)
+        for attempt in range(5):          # the window may be reading the file at this moment (Windows locks it)
+            try:
+                with open(tmp, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False)
+                os.replace(tmp, self.path)
+                return
+            except OSError:
+                time.sleep(0.2 * (attempt + 1))
+        # progress is only informational: never let it stop training
 
 
 def load_wav(path):
@@ -72,6 +78,29 @@ def error_rates(pairs):
     return we / max(rw, 1), ce / max(rc, 1)
 
 
+_LOCK_FILE = None
+
+
+def acquire_training_lock(folder: str) -> bool:
+    """Only one training per profile at a time (a second one would compete for the same files)."""
+    global _LOCK_FILE
+    os.makedirs(folder, exist_ok=True)
+    f = open(os.path.join(folder, "training.lock"), "a+")
+    try:
+        if os.name == "nt":
+            import msvcrt
+            f.seek(0)
+            msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        f.close()
+        return False
+    _LOCK_FILE = f                    # held until this process exits
+    return True
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", required=True)
@@ -87,6 +116,10 @@ def main(argv=None):
     ap.add_argument("--always-save", action="store_true", help="for tests: save the add-on even if not better")
     args = ap.parse_args(argv)
     prog = Progress(args.progress)
+    if not acquire_training_lock(os.path.dirname(os.path.abspath(args.progress))):
+        prog.update(1.0, "Another training for this profile is already running — this one was not started.",
+                    done=True, ok=False)
+        return 2
 
     try:
         prog.update(0.0, "Loading the speech model…")
