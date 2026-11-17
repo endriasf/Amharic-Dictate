@@ -7,7 +7,7 @@ Set-Location (Split-Path $PSScriptRoot -Parent)
 $version = (Select-String -Path config.py -Pattern 'APP_VERSION = "(.+)"').Matches[0].Groups[1].Value
 Write-Host "Building AmharicDictate $version"
 
-python -m pip install --upgrade pip pyinstaller
+python -m pip install --upgrade pip setuptools pyinstaller
 python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
 python -m pip install -r requirements.txt
 

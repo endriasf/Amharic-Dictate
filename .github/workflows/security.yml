@@ -21,7 +21,7 @@ jobs:
       - name: Install the app's libraries (same as the installer build)
         shell: pwsh
         run: |
-          python -m pip install --upgrade pip pyinstaller pip-audit
+          python -m pip install --upgrade pip setuptools pyinstaller pip-audit
           python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
           python -m pip install -r requirements.txt
       - name: Check for known vulnerabilities
