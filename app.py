@@ -403,8 +403,8 @@ class App:
         w.update_idletasks()
 
     # each start-up step's share of the percentage; within a step it creeps toward the step's end
-    _STEP_SPANS = {1: (0, 18), 2: (18, 28), 3: (28, 86), 4: (86, 95), 5: (95, 99)}
-    _STEP_SPEED = {1: 0.008, 2: 0.03, 3: 0.0025, 4: 0.01, 5: 0.05}     # step 3 (the AI model) is the slow one
+    _STEP_SPANS = {1: (0, 20), 2: (20, 30), 3: (30, 95), 4: (95, 99)}
+    _STEP_SPEED = {1: 0.008, 2: 0.03, 3: 0.003, 4: 0.05}     # step 3 (the AI model) is the slow one
 
     def _animate_wave(self):
         import math
@@ -568,7 +568,8 @@ class App:
 
     def _step(self, n, text):
         """Start-up progress: 'Step 2 of 5 — Loading the Amharic dictionary…' (tray tooltip after start-up)."""
-        self.ui_q.put(("loading", f"Step {n} of 5 — {text}"))
+        self.ui_q.put(("loading", f"Step {n} of 4 — {text}"))
+        self._step_times = getattr(self, "_step_times", []) + [(n, time.time())]   # start-up timing, for the log
 
     def _load_model(self):
         self._step(1, "Starting the AI engine…")
@@ -598,12 +599,20 @@ class App:
                 self.ui_q.put(("profile", f"Voice profile: {profile}" +
                                (f"  — not used: {transcriber.profile_problem}" if transcriber.profile_problem
                                 else "  ✓ loaded")))
-            preview = None
+            # The fast live-preview copy is made after "Ready", in the background: dictation works at once
+            # (previews use the main model until the copy is ready, a few seconds later).
+            self.engine = DictationEngine(transcriber, self.cfg, self._on_partial, self._on_phrase, None)
             if transcriber.device == "cpu" and not self.cfg["quantize_cpu"] and self.cfg.get("fast_preview", True):
-                self._step(4, "Preparing the live preview…")
-                preview = Transcriber(path, "cpu", True, auto_level=level,     # int8 copy: quick preview
-                                      adapter=adapter if not transcriber.profile_problem else None)
-            self.engine = DictationEngine(transcriber, self.cfg, self._on_partial, self._on_phrase, preview)
+                engine = self.engine
+
+                def make_preview():
+                    try:
+                        quick = Transcriber.quick_copy(transcriber)
+                        if self.engine is engine:
+                            engine.preview = quick
+                    except Exception:
+                        log_error(traceback.format_exc())
+                threading.Thread(target=make_preview, daemon=True).start()
             self.apply_my_words()
             self.apply_learning()
             here = os.path.dirname(os.path.abspath(__file__))
@@ -611,7 +620,7 @@ class App:
                 self.engine.decode_log = os.path.join(here, "decode_log.txt")
             if os.path.exists(os.path.join(here, "debug_audio.flag")):   # opt-in diagnostics
                 self.engine.debug_dir = os.path.join(here, "debug")
-            self._step(5, f"Turning on the {self.hotkey_label()} shortcut…")
+            self._step(4, f"Turning on the {self.hotkey_label()} shortcut…")
             self._register_hotkeys()
             self.tray.icon = tray_image("ready")
             self.tray.title = f"{APP_TITLE} — {self.hotkey_label()}" + (f" — {profile}" if profile else "")
@@ -624,6 +633,11 @@ class App:
             else:
                 who = ""
             self.ui_q.put(("ready", f"Ready. Press {self.hotkey_label()} to dictate.", who))
+            st = getattr(self, "_step_times", [])
+            if st:
+                parts = [f"step {a}: {t2 - t1:.1f}s" for (a, t1), (_, t2) in zip(st, st[1:] + [(0, time.time())])]
+                log_error("Start-up timing: " + ", ".join(parts) + f" (total {time.time() - st[0][1]:.1f}s)")
+            self._step_times = []
         except Exception as e:
             log_error(traceback.format_exc())
             self.ui_q.put(("splash_close",))
@@ -1329,7 +1343,7 @@ class App:
                 if kind == "loading":                # start-up progress: start-up window, or tray tooltip
                     if self._splash is not None:
                         self._splash_message(msg[1])
-                        m = re.match(r"Step (\d) of 5", msg[1])
+                        m = re.match(r"Step (\d) of \d", msg[1])
                         if m:
                             self._pct_step = int(m.group(1))
                             self._pct_span = self._STEP_SPANS.get(self._pct_step, self._pct_span)
@@ -1439,9 +1453,15 @@ def selftest(out_path: str) -> int:
         try:
             import numpy as np
             from engine import Transcriber
+            import time as _t0
+            t_load = _t0.time()
             tr = Transcriber(bundled, "cpu", False, use_lm=True)
+            lines.append(f"--   model load {_t0.time() - t_load:.1f}s")
             tr(np.zeros(16000, dtype=np.float32))
             lines.append(f"OK   built-in model ({bundled})")
+            import time as _t
+            t0 = _t.time(); quick = Transcriber.quick_copy(tr); quick(np.zeros(16000, dtype=np.float32))
+            lines.append(f"OK   live-preview copy made in memory ({_t.time() - t0:.1f}s)")
         except Exception as e:
             lines.append(f"FAIL built-in model: {e}"); code = 1
     else:
