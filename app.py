@@ -608,14 +608,14 @@ class App:
                                (f"  — not used: {transcriber.profile_problem}" if transcriber.profile_problem
                                 else "  ✓ loaded")))
             # The fast live-preview copy is made after "Ready", in the background: dictation works at once
-            # (previews use the main model until the copy is ready, a few seconds later).
+            # (previews use the main model until the copy is ready, or if it can't be made on this CPU).
             self.engine = DictationEngine(transcriber, self.cfg, self._on_partial, self._on_phrase, None)
             if transcriber.device == "cpu" and not self.cfg["quantize_cpu"] and self.cfg.get("fast_preview", True):
                 engine = self.engine
 
                 def make_preview():
                     try:
-                        quick = Transcriber.quick_copy(transcriber)
+                        quick = Transcriber.quick_copy(transcriber, path, adapter)
                         if self.engine is engine:
                             engine.preview = quick
                     except Exception:
@@ -1468,8 +1468,12 @@ def selftest(out_path: str) -> int:
             tr(np.zeros(16000, dtype=np.float32))
             lines.append(f"OK   built-in model ({bundled})")
             import time as _t
-            t0 = _t.time(); quick = Transcriber.quick_copy(tr); quick(np.zeros(16000, dtype=np.float32))
-            lines.append(f"OK   live-preview copy made in memory ({_t.time() - t0:.1f}s)")
+            t0 = _t.time()
+            try:                                  # optional: without it, the live preview uses the main model
+                quick = Transcriber.quick_copy(tr, bundled); quick(np.zeros(16000, dtype=np.float32))
+                lines.append(f"OK   live-preview copy ({_t.time() - t0:.1f}s)")
+            except Exception as e:
+                lines.append(f"--   live-preview copy not available on this CPU ({e}); the main model is used")
         except Exception as e:
             lines.append(f"FAIL built-in model: {e}"); code = 1
     else:
