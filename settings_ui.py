@@ -5,7 +5,7 @@ import os
 import tkinter as tk
 from tkinter import ttk
 
-from config import APP_NAME, APP_VERSION, MODEL_PRESETS, bring_to_front, bundled_model_dir
+from config import APP_TITLE, APP_VERSION, MODEL_PRESETS, bring_to_front, bundled_model_dir
 from textproc import COMMANDS
 
 INSERT_MODES = [("on_stop", "Paste when I stop"), ("per_phrase", "Type as I speak (each phrase)"),
@@ -16,7 +16,7 @@ DEVICES = [("auto", "Automatic"), ("cpu", "CPU"), ("cuda", "NVIDIA GPU")]
 
 def open_settings(root, cfg: dict, on_save):
     win = tk.Toplevel(root)
-    win.title(f"{APP_NAME} settings")
+    win.title(f"{APP_TITLE} settings")
     win.resizable(False, False)
     bring_to_front(win)
     pad = {"padx": 10, "pady": 4}
@@ -161,7 +161,7 @@ def open_settings(root, cfg: dict, on_save):
     check(m, 5, "auto_level", "Even out quiet or fading speech (automatic volume levelling)")
     check(m, 6, "lm_decoding", "Use the Amharic dictionary to pick words when audio is unclear")
     check(m, 3, "quantize_cpu", "Faster CPU mode (int8) — less accurate, for slow PCs")
-    ttk.Label(m, text=f"{APP_NAME} {APP_VERSION} — all speech is processed on this computer.",
+    ttk.Label(m, text=f"{APP_TITLE} {APP_VERSION} — all speech is processed on this computer.",
               foreground=T.MUTED).grid(row=7, column=0, columnspan=2, sticky="w", padx=10, pady=(14, 4))
 
     status = ttk.Label(win, text="", foreground=T.DANGER)
