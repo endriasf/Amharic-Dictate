@@ -41,6 +41,8 @@ pyinstaller --noconfirm --clean --windowed `
   --add-data "assets\tray_*.png;assets" `
   --add-data "assets\wordmark_dark.png;assets" `
   --add-data "assets\mark_128.png;assets" `
+  --add-data "assets\mark_light_128.png;assets" `
+  --add-data "assets\wordmark_light.png;assets" `
   --hidden-import voiceprofile --hidden-import voice_training --hidden-import train_local `
   --hidden-import learning --hidden-import lmdecode --hidden-import wordsync --hidden-import cmdspot --hidden-import theme --hidden-import updater `
   --hidden-import win32com.client --hidden-import pythoncom --hidden-import pywintypes `

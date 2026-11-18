@@ -85,6 +85,7 @@ DEFAULT_CONFIG = {
     "font_size": 15,
     "start_with_windows": False,
     "history_dir": "",           # folder for history.txt; empty = the app's settings folder
+    "appearance": "system",      # "system" (follow Windows), "dark" or "light"
     "check_updates": True,       # once a day, ask GitHub for the newest version number (no personal data)
     "last_update_check": 0,
     "live_word": True,           # dictating into Microsoft Word: text appears live and corrections sync

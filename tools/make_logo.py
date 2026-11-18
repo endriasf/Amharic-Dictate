@@ -92,8 +92,11 @@ def lockups():
         body = f'<g transform="translate(10 10)">{m}</g>{name_text(236, 134, 74, on_dark)}'
         render(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}">{body}</svg>', W, H,
                os.path.join(A, f"banner_{suffix}.png"))
-    # the mark alone (transparent), for the app's start-up window
+    # the mark alone (transparent), for the app's start-up window — dark and light mode
     render(svg(mark()), 128, 128, os.path.join(A, "mark_128.png"))
+    render(svg(light_mark()), 128, 128, os.path.join(A, "mark_light_128.png"))
+    render(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 56">{name_text(180, 42, 40, False, "middle")}</svg>',
+           360, 56, os.path.join(A, "wordmark_light.png"))
     # name only, for the app's start-up window (dark)
     render(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 56">{name_text(180, 42, 40, True, "middle")}</svg>',
            360, 56, os.path.join(A, "wordmark_dark.png"))

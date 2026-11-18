@@ -48,6 +48,8 @@ def open_settings(root, cfg: dict, on_save):
 
     # ---- General
     g = ttk.Frame(nb); nb.add(g, text="General")
+    labeled(g, 12, "Appearance", combo(g, "appearance", [("system", "Same as Windows (light or dark)"),
+                                                          ("dark", "Dark"), ("light", "Light")]))
     labeled(g, 0, "Dictation mode", combo(g, "mode", MODES))
     labeled(g, 1, "Hotkey (toggle mode)", entry(g, "hotkey"))
     labeled(g, 2, "Hold key (push-to-talk)", entry(g, "hold_key"))
@@ -119,7 +121,7 @@ def open_settings(root, cfg: dict, on_save):
     fs_var = tk.IntVar(value=fs_now)
     v["font_size"] = (fs_var, None)
     fs = ttk.Frame(t)
-    preview = tk.Label(t, text="ሰላም፣ እንዴት ነህ? ይህ የጽሑፍ መጠን ነው።", anchor="w", fg="white", bg=T.FIELD,
+    preview = tk.Label(t, text="ሰላም፣ እንዴት ነህ? ይህ የጽሑፍ መጠን ነው።", anchor="w", fg=T.TEXT, bg=T.FIELD,
                        padx=10, pady=6)
 
     def fs_update(*_):

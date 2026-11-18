@@ -191,7 +191,8 @@ class App:
         # ---- overlay
         self.root = tk.Tk()
         self.root.title(APP_TITLE)
-        T.apply(self.root)                      # dark green theme for every window
+        T.use(T.wanted_mode(self.cfg.get("appearance", "system")))     # light or dark, like Windows
+        T.apply(self.root)
         try:                                    # window/taskbar icon for every window
             from config import asset_file
             self._icon_img = tk.PhotoImage(file=asset_file("logo_256.png"))
@@ -219,14 +220,14 @@ class App:
         self.meter.pack(side="right")
         self.meter_bar = self.meter.create_rectangle(0, 0, 0, 8, fill=T.ACCENT_HI, width=0)
         # Read-only Text widget: wraps long dictation and auto-scrolls to the newest words
-        self.text = tk.Text(frame, fg="white", bg=bg, wrap="word", height=3, bd=0, highlightthickness=0,
+        self.text = tk.Text(frame, fg=T.TEXT, bg=bg, wrap="word", height=3, bd=0, highlightthickness=0,
                             cursor="arrow", takefocus=0, padx=0, pady=4, spacing1=2)
         self.text.pack(fill="both", expand=True)
         self.text.config(state="disabled")
 
         self.text.tag_configure("unsure", foreground=T.WARNING, underline=True)
         self.text.tag_configure("gap", foreground=T.INFO)
-        self.text.tag_configure("selected", background=T.SELECT, foreground="white")
+        self.text.tag_configure("selected", background=T.SELECT, foreground=T.TEXT)
         self.text.tag_configure("misspelled", foreground=T.DANGER, underline=True)
         self._spell_cache = {}
 
@@ -242,7 +243,7 @@ class App:
         row2.pack(fill="x", pady=(3, 0))
         self.sugg_actions = tk.Frame(row2, bg=bg)        # Remove / Join / Insert…
         self.sugg_actions.pack(side="left")
-        keep = tk.Label(row2, text="✕ Keep original", fg="white", bg=T.BTN, font=("Segoe UI", 9),
+        keep = tk.Label(row2, text="✕ Keep original", fg=T.TEXT, bg=T.BTN, font=("Segoe UI", 9),
                         padx=8, pady=2, cursor="hand2")
         keep.pack(side="right")
         keep.bind("<Button-1>", lambda e: self._suggestion_chosen(None))
@@ -266,17 +267,17 @@ class App:
             ("done",   "✓ Done",         self.toggle,       T.ACCENT),
         ):
             parent = bar_right if key in ("done", "cancel") else bar_left
-            b = tk.Label(parent, text=label, fg="white", bg=color, font=("Segoe UI", 10),
+            b = tk.Label(parent, text=label, fg=T.on(color), bg=color, font=("Segoe UI", 10),
                          padx=10, pady=4, cursor="hand2")
             b.pack(side="left", padx=(0, 6) if parent is bar_left else (6, 0))
             b.bind("<Button-1>", lambda e, c=cmd: c())
             b.bind("<Enter>", lambda e, w=b: w.config(bg=T.BTN_HOVER))
-            b.bind("<Leave>", lambda e, w=b, c=color: w.config(bg=c))
+            b.bind("<Leave>", lambda e, w=b, r=T.role(color): w.config(bg=getattr(T, r)))
             self.buttons[key] = b
 
         # punctuation buttons (more reliable than saying the command)
         for mark in ("።", "፣", "፤", "?", "!", "«", "»", "(", ")"):
-            pb = tk.Label(bar_mid, text=mark, fg="white", bg=T.BTN, font=("Nyala", 14, "bold"),
+            pb = tk.Label(bar_mid, text=mark, fg=T.TEXT, bg=T.BTN, font=("Nyala", 14, "bold"),
                           width=2, cursor="hand2")
             pb.pack(side="left", padx=2)
             pb.bind("<Button-1>", lambda e, m=mark: self.engine and self.active and self.engine.add_punctuation(m))
@@ -337,6 +338,21 @@ class App:
         self._reload_model()
         self.root.after(50, self._pump_ui)
         self.root.after(60_000, self._schedule_update_checks)            # a minute after start-up
+        self.root.after(3000, self._watch_mode)
+
+    # ---------- light / dark mode: follow Windows while the app runs
+    def _watch_mode(self, once=False):
+        want = T.wanted_mode(self.cfg.get("appearance", "system"))
+        if want != T.MODE:
+            old = T.palette()
+            T.use(want)
+            T.apply(self.root)
+            T.recolor(self.root, old, T.palette())
+            for w in self.root.winfo_children():
+                if w.winfo_class() == "Toplevel":
+                    T.dark_title_bar(w)
+        if not once:
+            self.root.after(3000, self._watch_mode)
 
     # ---------- start-up window (centred, like other apps; closes when the model is ready)
     def _show_splash(self):
@@ -350,12 +366,14 @@ class App:
         box = tk.Frame(w, bg=T.BG, highlightthickness=1, highlightbackground=T.BORDER)
         box.pack(fill="both", expand=True)
         try:
-            self._splash_logo = tk.PhotoImage(file=asset_file("mark_128.png"))   # same mark as everywhere
+            self._splash_logo = tk.PhotoImage(file=asset_file(                      # same mark as everywhere
+                "mark_light_128.png" if T.MODE == "light" else "mark_128.png"))
             tk.Label(box, image=self._splash_logo, bg=T.BG).pack(pady=(26, 8))
         except Exception:
             pass
         try:                                    # the logo's name lettering (same image everywhere)
-            self._splash_name = tk.PhotoImage(file=asset_file("wordmark_dark.png"))
+            self._splash_name = tk.PhotoImage(file=asset_file(
+                "wordmark_light.png" if T.MODE == "light" else "wordmark_dark.png"))
             tk.Label(box, image=self._splash_name, bg=T.BG).pack()
         except Exception:
             tk.Label(box, text="AmharicDictate", font=("Segoe UI Semibold", 20), fg=T.TEXT, bg=T.BG).pack()
@@ -445,11 +463,11 @@ class App:
         m.configure(bg=bg)
         box = tk.Frame(m, bg=bg, padx=10, pady=6)
         box.pack(fill="both", expand=True)
-        self.mini_status = tk.Label(box, text="", fg="white", bg=bg, font=("Segoe UI", 10), anchor="w",
+        self.mini_status = tk.Label(box, text="", fg=T.TEXT, bg=bg, font=("Segoe UI", 10), anchor="w",
                                     cursor="fleur")
         self.mini_status.pack(side="left", padx=(0, 10))
         for label, cmd in (("⏸", self.toggle_pause), ("⤢ Show", self.restore), ("✓ Done", self.toggle)):
-            b = tk.Label(box, text=label, fg="white", bg=T.ACCENT if "Done" in label else T.BTN,
+            b = tk.Label(box, text=label, fg=T.ON_ACCENT if "Done" in label else T.TEXT, bg=T.ACCENT if "Done" in label else T.BTN,
                          font=("Segoe UI", 10), padx=8, pady=2, cursor="hand2")
             b.pack(side="left", padx=(0, 4))
             b.bind("<Button-1>", lambda e, c=cmd: c())
@@ -470,7 +488,7 @@ class App:
         paused = bool(self.engine and self.engine.paused)
         words = len((self.engine.committed_text() if self.engine else "").split())
         state = "⏸ Paused" if paused else ("● Listening" if self.active else "Amharic Dictate")
-        self.mini_status.config(text=f"{state}  ·  {words} words", fg=T.WARNING if paused else T.DANGER if self.active else "white")
+        self.mini_status.config(text=f"{state}  ·  {words} words", fg=T.WARNING if paused else T.DANGER if self.active else T.TEXT)
         self.mini_pause.config(text="▶" if paused else "⏸")
 
     def minimize(self):
@@ -957,6 +975,7 @@ class App:
     def apply_settings(self, new: dict):
         old = self.cfg
         self.root.after(100, lambda: self.tray.update_menu())        # e.g. show/hide Open history
+        self.root.after(150, lambda: self._watch_mode(once=True))     # appearance setting
         save_config(new)
         self.cfg = new
         try:
@@ -1190,7 +1209,7 @@ class App:
                 w.destroy()
 
         def action(label, fn, color=T.BTN):
-            b = tk.Label(self.sugg_actions, text=label, fg="white", bg=color, font=("Segoe UI", 9),
+            b = tk.Label(self.sugg_actions, text=label, fg=T.on(color), bg=color, font=("Segoe UI", 9),
                          padx=7, pady=2, cursor="hand2")
             b.pack(side="left", padx=(0, 5))
             b.bind("<Button-1>", lambda e: fn())
@@ -1212,7 +1231,7 @@ class App:
             action("➕ Insert after", lambda: self._keep_and_insert("after"))
         for opt in options:
             family = self.text.cget("font").split(" ")[0].strip("{}") or "Ebrima"
-            b = tk.Label(self.sugg_chips, text=opt, fg="white", bg=T.CHIP, font=(family, 13),
+            b = tk.Label(self.sugg_chips, text=opt, fg=T.TEXT, bg=T.CHIP, font=(family, 13),
                          padx=8, pady=1, cursor="hand2")
             b.pack(side="left", padx=(0, 4))
             b.bind("<Button-1>", lambda e, o=opt: self._suggestion_chosen(o))
@@ -1396,9 +1415,13 @@ def selftest(out_path: str) -> int:
         app.open_settings(); app.root.update()
         app.open_training(); app.root.update()
         app._wave_done = True; app.root.update()
+        import theme as T                       # switch to light mode and back, as when Windows changes
+        for mode in ("light", "dark"):
+            old = T.palette(); T.use(mode); T.apply(app.root); T.recolor(app.root, old, T.palette())
+            app.root.update()
         app._close_splash(); app.root.update()
         app.root.destroy()
-        lines.append("OK   app windows (start-up, dictation box, settings, voice profiles)")
+        lines.append("OK   app windows (start-up, dictation box, settings, voice profiles, light/dark switch)")
     except Exception:
         lines.append("FAIL app windows: " + traceback.format_exc().replace("\n", " | ")); code = 1
     from textproc import finish_phrase
