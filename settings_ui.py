@@ -99,9 +99,9 @@ def open_settings(root, cfg: dict, on_save):
     ttk.Label(t, text=cmds, wraplength=420, foreground=T.MUTED).grid(row=1, column=0, columnspan=2, sticky="w", padx=28)
     check(t, 2, "numbers_to_digits", "Write spoken numbers as digits (ሁለት መቶ ሀምሳ → 250)")
     check(t, 3, "auto_period", "Add ። automatically at the end of each phrase")
-    check(t, 8, "spellcheck", "Underline words that look misspelled (red)")
-    check(t, 7, "autocorrect_spelling", "Fix sound-alike spellings using the Amharic dictionary (ሠ/ሰ, ፀ/ጸ, ሐ/ሀ…)")
-    check(t, 6, "model_punctuation", "Let the speech model add ። ፣ ? on its own (often wrong)")
+    check(t, 9, "spellcheck", "Underline words that look misspelled (red)")
+    check(t, 8, "autocorrect_spelling", "Fix sound-alike spellings using the Amharic dictionary (ሠ/ሰ, ፀ/ጸ, ሐ/ሀ…)")
+    check(t, 7, "model_punctuation", "Let the speech model add ። ፣ ? on its own (often wrong)")
     labeled(t, 4, "Pause that ends a phrase (ms)", entry(t, "silence_ms", 8))
     # dictation text size: slider + number + live Amharic preview
     fs_min, fs_max, fs_default = 10, 36, 15
@@ -134,7 +134,7 @@ def open_settings(root, cfg: dict, on_save):
                command=lambda: (fs_var.set(fs_default), fs.winfo_children()[0].set(fs_default))).pack(side="left")
     fs_var.trace_add("write", fs_update)
     labeled(t, 5, "Dictation text size", fs)
-    preview.grid(row=9, column=0, columnspan=2, sticky="we", padx=10, pady=(2, 8))
+    preview.grid(row=6, column=0, columnspan=2, sticky="we", padx=10, pady=(0, 10))   # right under the size
     fs_update()
 
     # ---- Model
