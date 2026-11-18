@@ -163,19 +163,11 @@ class Transcriber:
             self.lm = LexiconDecoder(self._id2tok, self._blank, weight=lm_weight)
 
     @classmethod
-    def quick_copy(cls, main: "Transcriber") -> "Transcriber":
-        """A fast int8 copy of an already-loaded CPU model, for the live preview. Copies the weights in
-        memory (voice profile already merged) instead of reading the 1.2 GB model from disk again."""
-        import copy
-        torch = main.torch
-        t = cls.__new__(cls)
-        t.__dict__.update({k: v for k, v in main.__dict__.items() if k not in ("model", "_lock", "lm")})
-        t.model = torch.quantization.quantize_dynamic(copy.deepcopy(main.model), {torch.nn.Linear}, dtype=torch.qint8)
-        t._lock = threading.Lock()
-        t.lm = None                                 # previews use the plain decoder (faster)
-        t.min_confidence = 0.0
-        t.last_alternatives = {}
-        return t
+    def quick_copy(cls, main: "Transcriber", model_path: str, adapter=None) -> "Transcriber":
+        """The fast int8 copy for the live preview. Loaded the proven way (from disk, then quantized),
+        but called in the background after start-up, so nobody waits for it."""
+        return cls(model_path, "cpu", True, auto_level=main.auto_level,
+                   adapter=adapter if not main.profile_problem else None)
 
     def __call__(self, audio: np.ndarray) -> str:
         if len(audio) < SR // 4:
