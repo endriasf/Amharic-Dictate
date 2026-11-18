@@ -4,7 +4,7 @@ on:
   workflow_dispatch:          # "Run workflow" button in the Actions tab
     inputs:
       model_source:
-        description: "Speech model to package inside the app (Hugging Face id). Empty = download on first launch."
+        description: "Speech model to package inside the app (Hugging Face id). Empty = Amharic Speech-to-Text EFA v1."
         required: false
         default: ""
   push:
@@ -30,7 +30,7 @@ jobs:
       - name: Build app + installer (includes self-test)
         shell: pwsh
         env:
-          MODEL_SOURCE: ${{ inputs.model_source || vars.MODEL_SOURCE }}
+          MODEL_SOURCE: ${{ inputs.model_source || vars.MODEL_SOURCE || 'Abittee/amharic-speech-to-text-efa-v1' }}   # releases always ship the model
           STORE_IDENTITY_NAME: ${{ vars.STORE_IDENTITY_NAME }}
           STORE_PUBLISHER: ${{ vars.STORE_PUBLISHER }}
           STORE_PUBLISHER_NAME: ${{ vars.STORE_PUBLISHER_NAME }}

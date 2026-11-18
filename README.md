@@ -29,20 +29,23 @@ Free and open source.
 - A microphone. A headset gives the best results.
 
 ### Download
-- **Microsoft Store** (recommended): search for **Amharic Dictate**, then click **Get**.
-- **Or** download **AmharicDictate-Setup.exe** from the
-  [Releases page](https://github.com/endriasf/Amharic-Dictate/releases) and run it.
-  No administrator rights are needed. If Windows shows *"Windows protected your PC"*, click
-  **More info → Run anyway**.
+- **Microsoft Store** (recommended): open the Microsoft Store, search for **Amharic Dictate**, then
+  click **Get**. The Store version is signed by Microsoft and updates itself.
+- **Or** download **AmharicDictate-Setup-2.4.0.exe** from the
+  [Releases page](https://github.com/endriasf/Amharic-Dictate/releases) and run it — for PCs where
+  the Microsoft Store isn't available. No administrator rights are needed. Windows may show
+  *"Windows protected your PC"* because this download isn't code-signed yet: click
+  **More info → Run anyway**. This version tells you when an update is available.
 
-After installing, Amharic Dictate starts automatically. A **microphone icon** appears in the
-taskbar's system tray (bottom right, next to the clock; click **^** if you don't see it).
+After installing, Amharic Dictate opens with a start-up window while it loads, then waits in the
+taskbar's system tray (bottom right, next to the clock; click **^** if you don't see its round icon).
 
 | Icon colour | Meaning |
 |---|---|
 | Grey | Starting up (about 30–60 seconds) |
 | Green | Ready |
 | Red | Listening |
+| Gold | Paused |
 
 ---
 
