@@ -32,6 +32,25 @@ def single_instance() -> bool:
         return True
 
 
+class NoMicrophone(Exception):
+    """Windows has no microphone the app can use."""
+
+
+def mic_problem() -> str:
+    """Why no microphone could be opened, in plain words."""
+    try:
+        import sounddevice as sd
+        has_input = any(d.get("max_input_channels", 0) > 0 for d in sd.query_devices())
+    except Exception:
+        has_input = False
+    if not has_input:
+        return ("No microphone was found. Plug in a microphone or headset (or, on a remote desktop, turn on "
+                "microphone redirection), then try again.")
+    return ("Windows didn't let Amharic Dictate use the microphone. Open Windows Settings → Privacy & security → "
+            "Microphone, turn on \"Let desktop apps access your microphone\", and check that a microphone is set "
+            "as the default input in Settings → System → Sound.")
+
+
 def beep(freq: int, ms: int = 70):
     try:
         import winsound
@@ -581,11 +600,17 @@ class App:
         self.stream.start()
 
     def mic_acquire(self, who: str):
-        """Open the microphone while someone needs it (dictation or a training recording)."""
+        """Open the microphone while someone needs it (dictation or a training recording).
+        Raises NoMicrophone with a plain explanation when Windows has no microphone to give."""
         with self._mic_lock:
-            self._mic_users.add(who)
             if self.stream is None:
-                self._open_mic()
+                try:
+                    self._open_mic()
+                except Exception as e:
+                    self.stream = None
+                    log_error(f"Microphone: {e}")
+                    raise NoMicrophone(mic_problem()) from e
+            self._mic_users.add(who)
 
     def mic_release(self, who: str):
         """Close the microphone as soon as nothing needs it, so it is never on in the background."""
@@ -966,7 +991,12 @@ class App:
             return
         try:
             if not self.active:
-                self.mic_acquire("dictation")
+                try:
+                    self.mic_acquire("dictation")
+                except NoMicrophone as e:
+                    self.ui_q.put(("show", "Can't use the microphone", str(e)))
+                    self.ui_q.put(("hide_after", 9000))
+                    return
                 self.word = None
                 if self.cfg.get("live_word", True) and self.cfg["insert"] == "on_stop":
                     from wordsync import WordSync, front_window_class, WORD_WINDOW_CLASS
