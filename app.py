@@ -684,19 +684,18 @@ class App:
 
     def show_about(self):
         from tkinter import messagebox
-        model = self.cfg.get("model", "")
-        if model == "bundled":
-            model = "Amharic Speech-to-Text EFA v1 (built in)"
+        model = self.model_name()                     # a name, never a folder path
         if "Ethio-ASR" in model:
             model_credit = ("Speech model: Ethio-ASR (Amharic) by badrex, CC BY-NC 4.0 — "
                             "free, non-commercial use only.")
         else:
             model_credit = (f"AI speech model: {model}, CC BY-SA 4.0 — based on facebook/w2v-bert-2.0 (MIT), "
-                            "trained on WAXAL (Google & partners) and FLEURS (Google) Amharic speech data.")
+                            "trained on WAXAL (Google & partners) and FLEURS (Google) Amharic speech data."
+                            if model.startswith("Amharic Speech-to-Text EFA") else f"AI speech model: {model}.")
         messagebox.showinfo(
             f"About {APP_NAME}",
             f"{APP_NAME} {APP_VERSION}\n"
-            "Offline Amharic dictation for Windows, powered by Amharic Speech-to-Text EFA v1,\nan AI speech model that runs on this computer.\n\n"
+            "Offline Amharic dictation for Windows, powered by AI speech recognition\nthat runs on this computer.\n\n"
             f"{model_credit}\n\n"
             "Amharic dictionary: Leipzig Corpora Collection (CC BY 4.0).\n"
             "Reading sentences: Leipzig Corpora Collection, Amharic Wikipedia (CC BY 4.0).\n\n"
