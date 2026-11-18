@@ -234,6 +234,14 @@ Tray icon → **Settings**:
 | Background voices get typed | Use **⏸ Pause** or push-to-talk mode |
 | Text doesn't appear in a program | Programs running as Administrator block typing from normal apps. Use **⧉ Copy** and paste with Ctrl + V |
 | Amharic letters show as boxes | Use an Amharic-capable font such as **Ebrima** or **Nyala** (built into Windows) |
+| "Can't use the microphone" | Plug in a microphone or headset. On a remote desktop, turn on microphone redirection. Check **Windows Settings → Privacy & security → Microphone → Let desktop apps access your microphone** |
+| "Amharic Dictate is already running" | It's in the system tray next to the clock (click **^**). If it doesn't respond: Task Manager → **Details** → end every **AmharicDictate.exe**, then start it again |
+
+### Uninstall
+Open **Windows Settings → Apps → Installed apps**, find **Amharic Dictate**, click **⋯ → Uninstall**.
+You can also right-click **Amharic Dictate** in the Start menu and choose **Uninstall**. (Windows
+hides "Uninstall" shortcuts in the Start menu, so the app doesn't add one.) You'll be asked whether
+to delete your voice profiles and settings too.
 
 ---
 

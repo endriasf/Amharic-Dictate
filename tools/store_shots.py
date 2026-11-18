@@ -31,7 +31,7 @@ app = A.App(ui_test=True)
 root = app.root
 # 1. start-up window
 app._splash_profile.config(text="Voice profile: Andro  ✓ loaded")
-app._splash_message("Loading the AI model and Andro's voice profile…")
+app._splash_message("Step 3 of 4 — Loading the AI model and Andro's voice profile… (the longest step)")
 for _ in range(15):                      # let the sound wave move
     root.update(); time.sleep(0.05)
 grab(app._splash, "1_startup.png", 0.3)

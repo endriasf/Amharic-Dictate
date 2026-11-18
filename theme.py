@@ -1,22 +1,113 @@
-"""Amharic Dictate colours: neutral dark windows with the logo's green as the accent."""
+"""Amharic Dictate colours: dark or light (following Windows), with the logo's green as the accent."""
 
-BG = "#1E2220"           # windows: neutral charcoal
-FIELD = "#16191A"        # text areas, lists, entry fields, title strips
-BTN = "#2B302E"          # buttons
-BTN_HOVER = "#363D3A"
-ACCENT = "#288C5A"       # the green: main action (Done), selected tab, ticks
-ACCENT_HI = "#5CC08A"    # progress, level meter
-BORDER = "#3A413E"
-SELECT = "#2C5E45"       # selected text / list rows (muted green)
-TEXT = "#F2F4F3"
-MUTED = "#C2C9C5"        # secondary text
-DIM = "#8B9490"          # hints
-DANGER_BTN = "#5A2D2D"
-DANGER = "#FF8A80"       # error text
-WARNING = "#FFCC66"
-SUCCESS = "#7EE0A8"
-INFO = "#4FC3F7"
-CHIP = "#2F3A35"         # suggestion chips
+DARK = dict(
+    BG="#1E2220",          # windows: neutral charcoal
+    FIELD="#16191A",       # text areas, lists, entry fields, title strips
+    BTN="#2B302E",         # buttons
+    BTN_HOVER="#363D3A",
+    ACCENT="#288C5A",      # the green: main action (Done), selected tab, ticks
+    ACCENT_HI="#5CC08A",   # progress, level meter
+    BORDER="#3A413E",
+    SELECT="#2C5E45",      # selected text / list rows (muted green)
+    TEXT="#F2F4F3",
+    MUTED="#C2C9C5",       # secondary text
+    DIM="#8B9490",         # hints
+    DANGER_BTN="#5A2D2D",
+    DANGER="#FF8A80",      # error text
+    WARNING="#FFCC66",
+    SUCCESS="#7EE0A8",
+    INFO="#4FC3F7",
+    CHIP="#2F3A35",        # suggestion chips
+)
+LIGHT = dict(
+    BG="#F5F7F6", FIELD="#FFFFFF", BTN="#E4EAE7", BTN_HOVER="#D6DFDA", ACCENT="#1E7A4E",
+    ACCENT_HI="#22A060", BORDER="#C5CFCA", SELECT="#C9E9D8", TEXT="#1B211E", MUTED="#4C5752",
+    DIM="#78837D", DANGER_BTN="#F3D5D5", DANGER="#C62828", WARNING="#A15C00", SUCCESS="#1E7A4E",
+    INFO="#0277BD", CHIP="#E1ECE6",
+)
+ON_ACCENT = "#FFFFFF"      # text on the green Done button, both modes
+MODE = "dark"
+globals().update(DARK)
+
+
+def windows_uses_light() -> bool:
+    """Windows' own setting: Settings → Personalization → Colors → "Choose your app mode"."""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                            r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as k:
+            return winreg.QueryValueEx(k, "AppsUseLightTheme")[0] == 1
+    except Exception:
+        return False
+
+
+def wanted_mode(setting: str = "system") -> str:
+    if setting in ("dark", "light"):
+        return setting
+    return "light" if windows_uses_light() else "dark"
+
+
+def use(mode: str):
+    """Switch the colours every window reads (call apply() and recolor() to update open windows)."""
+    global MODE
+    MODE = "light" if mode == "light" else "dark"
+    globals().update(LIGHT if MODE == "light" else DARK)
+
+
+def palette() -> dict:
+    return dict(LIGHT if MODE == "light" else DARK)
+
+
+def role(color: str) -> str:
+    """The palette name of a colour (e.g. "BTN"), so it can be looked up again after a mode switch."""
+    for k, v in palette().items():
+        if v.lower() == str(color).lower():
+            return k
+    return "BTN"
+
+
+def on(color: str) -> str:
+    """Text colour for a button of this background."""
+    return ON_ACCENT if color in (DARK["ACCENT"], LIGHT["ACCENT"]) else TEXT
+
+
+def recolor(widget, old: dict, new: dict):
+    """Repaint open windows after a light/dark switch: every colour from the old palette becomes the
+    same role's colour in the new one (other colours, like white text on green, are kept)."""
+    swap = {old[k].lower(): new[k] for k in old}
+    opts = ("background", "foreground", "activebackground", "activeforeground", "insertbackground",
+            "selectbackground", "selectforeground", "highlightbackground", "highlightcolor")
+
+    def walk(w):
+        for o in opts:
+            try:
+                v = str(w.cget(o)).lower()
+            except Exception:
+                continue
+            if v in swap:
+                try:
+                    w.configure(**{o: swap[v]})
+                except Exception:
+                    pass
+        cls = w.winfo_class()
+        if cls == "Text":
+            for tag in w.tag_names():
+                for o in ("background", "foreground"):
+                    v = str(w.tag_cget(tag, o)).lower()
+                    if v in swap:
+                        w.tag_configure(tag, **{o: swap[v]})
+        elif cls == "Canvas":
+            for item in w.find_all():
+                for o in ("fill", "outline"):
+                    try:
+                        v = str(w.itemcget(item, o)).lower()
+                    except Exception:
+                        continue
+                    if v in swap:
+                        w.itemconfigure(item, **{o: swap[v]})
+        for c in w.winfo_children():
+            walk(c)
+    walk(widget)
 
 
 def apply(root):
@@ -71,12 +162,12 @@ def apply(root):
 
 
 def dark_title_bar(win):
-    """Ask Windows 10/11 for a dark title bar on this window (ignored elsewhere)."""
+    """Match the window's title bar to the app's light/dark mode (Windows 10/11; ignored elsewhere)."""
     try:
         import ctypes
         win.update_idletasks()
         hwnd = ctypes.windll.user32.GetParent(win.winfo_id())
-        val = ctypes.c_int(1)
+        val = ctypes.c_int(1 if MODE == "dark" else 0)
         for attr in (20, 19):                      # DWMWA_USE_IMMERSIVE_DARK_MODE (new, old builds)
             if ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, attr, ctypes.byref(val), 4) == 0:
                 break

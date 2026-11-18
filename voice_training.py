@@ -453,7 +453,7 @@ class VoiceTrainingWindow:
             try:
                 self.app.mic_acquire("training")
             except Exception as e:
-                self.msg.config(text=f"Microphone error: {e}", foreground=T.DANGER)
+                self.msg.config(text=str(e), foreground=T.DANGER)
                 return
             self.recording = True
             self.rec_btn.config(text="■  Stop")

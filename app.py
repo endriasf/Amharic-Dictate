@@ -10,6 +10,7 @@ import theme as T
 import os
 import queue
 import sys
+import re
 import threading
 import time
 import traceback
@@ -30,6 +31,25 @@ def single_instance() -> bool:
         return ctypes.windll.kernel32.GetLastError() != 183  # ERROR_ALREADY_EXISTS
     except Exception:
         return True
+
+
+class NoMicrophone(Exception):
+    """Windows has no microphone the app can use."""
+
+
+def mic_problem() -> str:
+    """Why no microphone could be opened, in plain words."""
+    try:
+        import sounddevice as sd
+        has_input = any(d.get("max_input_channels", 0) > 0 for d in sd.query_devices())
+    except Exception:
+        has_input = False
+    if not has_input:
+        return ("No microphone was found. Plug in a microphone or headset (or, on a remote desktop, turn on "
+                "microphone redirection), then try again.")
+    return ("Windows didn't let Amharic Dictate use the microphone. Open Windows Settings → Privacy & security → "
+            "Microphone, turn on \"Let desktop apps access your microphone\", and check that a microphone is set "
+            "as the default input in Settings → System → Sound.")
 
 
 def beep(freq: int, ms: int = 70):
@@ -172,7 +192,8 @@ class App:
         # ---- overlay
         self.root = tk.Tk()
         self.root.title(APP_TITLE)
-        T.apply(self.root)                      # dark green theme for every window
+        T.use(T.wanted_mode(self.cfg.get("appearance", "system")))     # light or dark, like Windows
+        T.apply(self.root)
         try:                                    # window/taskbar icon for every window
             from config import asset_file
             self._icon_img = tk.PhotoImage(file=asset_file("logo_256.png"))
@@ -200,14 +221,14 @@ class App:
         self.meter.pack(side="right")
         self.meter_bar = self.meter.create_rectangle(0, 0, 0, 8, fill=T.ACCENT_HI, width=0)
         # Read-only Text widget: wraps long dictation and auto-scrolls to the newest words
-        self.text = tk.Text(frame, fg="white", bg=bg, wrap="word", height=3, bd=0, highlightthickness=0,
+        self.text = tk.Text(frame, fg=T.TEXT, bg=bg, wrap="word", height=3, bd=0, highlightthickness=0,
                             cursor="arrow", takefocus=0, padx=0, pady=4, spacing1=2)
         self.text.pack(fill="both", expand=True)
         self.text.config(state="disabled")
 
         self.text.tag_configure("unsure", foreground=T.WARNING, underline=True)
         self.text.tag_configure("gap", foreground=T.INFO)
-        self.text.tag_configure("selected", background=T.SELECT, foreground="white")
+        self.text.tag_configure("selected", background=T.SELECT, foreground=T.TEXT)
         self.text.tag_configure("misspelled", foreground=T.DANGER, underline=True)
         self._spell_cache = {}
 
@@ -223,7 +244,7 @@ class App:
         row2.pack(fill="x", pady=(3, 0))
         self.sugg_actions = tk.Frame(row2, bg=bg)        # Remove / Join / Insert…
         self.sugg_actions.pack(side="left")
-        keep = tk.Label(row2, text="✕ Keep original", fg="white", bg=T.BTN, font=("Segoe UI", 9),
+        keep = tk.Label(row2, text="✕ Keep original", fg=T.TEXT, bg=T.BTN, font=("Segoe UI", 9),
                         padx=8, pady=2, cursor="hand2")
         keep.pack(side="right")
         keep.bind("<Button-1>", lambda e: self._suggestion_chosen(None))
@@ -247,17 +268,17 @@ class App:
             ("done",   "✓ Done",         self.toggle,       T.ACCENT),
         ):
             parent = bar_right if key in ("done", "cancel") else bar_left
-            b = tk.Label(parent, text=label, fg="white", bg=color, font=("Segoe UI", 10),
+            b = tk.Label(parent, text=label, fg=T.on(color), bg=color, font=("Segoe UI", 10),
                          padx=10, pady=4, cursor="hand2")
             b.pack(side="left", padx=(0, 6) if parent is bar_left else (6, 0))
             b.bind("<Button-1>", lambda e, c=cmd: c())
             b.bind("<Enter>", lambda e, w=b: w.config(bg=T.BTN_HOVER))
-            b.bind("<Leave>", lambda e, w=b, c=color: w.config(bg=c))
+            b.bind("<Leave>", lambda e, w=b, r=T.role(color): w.config(bg=getattr(T, r)))
             self.buttons[key] = b
 
         # punctuation buttons (more reliable than saying the command)
         for mark in ("።", "፣", "፤", "?", "!", "«", "»", "(", ")"):
-            pb = tk.Label(bar_mid, text=mark, fg="white", bg=T.BTN, font=("Nyala", 14, "bold"),
+            pb = tk.Label(bar_mid, text=mark, fg=T.TEXT, bg=T.BTN, font=("Nyala", 14, "bold"),
                           width=2, cursor="hand2")
             pb.pack(side="left", padx=2)
             pb.bind("<Button-1>", lambda e, m=mark: self.engine and self.active and self.engine.add_punctuation(m))
@@ -311,6 +332,8 @@ class App:
         if ui_test:                             # self-test: build the windows only (no tray, mic, model)
             return
         self.tray.run_detached()
+        self._splash_message("Checking your voice profile…")
+        self._splash.update()
         try:
             self.ensure_profile()
         except Exception:
@@ -318,6 +341,29 @@ class App:
         self._reload_model()
         self.root.after(50, self._pump_ui)
         self.root.after(60_000, self._schedule_update_checks)            # a minute after start-up
+        self.root.after(1000, self._watch_mode)
+
+    # ---------- light / dark mode: follow Windows while the app runs
+    def _watch_mode(self, once=False):
+        want = T.wanted_mode(self.cfg.get("appearance", "system"))
+        if want != T.MODE:
+            old = T.palette()
+            T.use(want)
+            T.apply(self.root)
+            T.recolor(self.root, old, T.palette())
+            for w in self.root.winfo_children():
+                if w.winfo_class() == "Toplevel":
+                    T.dark_title_bar(w)
+            if getattr(self, "_splash", None) is not None:      # start-up window: light/dark logo too
+                try:
+                    from config import asset_file
+                    light = T.MODE == "light"
+                    self._splash_logo.configure(file=asset_file("mark_light_128.png" if light else "mark_128.png"))
+                    self._splash_name.configure(file=asset_file("wordmark_light.png" if light else "wordmark_dark.png"))
+                except Exception:
+                    pass
+        if not once:
+            self.root.after(3000, self._watch_mode)
 
     # ---------- start-up window (centred, like other apps; closes when the model is ready)
     def _show_splash(self):
@@ -326,28 +372,36 @@ class App:
         w = self._splash = tk.Toplevel(self.root)
         w.overrideredirect(True)
         w.attributes("-topmost", True)
-        W, H = 460, 390
+        W, H = 460, 395
         w.geometry(f"{W}x{H}+{(w.winfo_screenwidth() - W) // 2}+{(w.winfo_screenheight() - H) // 2}")
         box = tk.Frame(w, bg=T.BG, highlightthickness=1, highlightbackground=T.BORDER)
         box.pack(fill="both", expand=True)
         try:
-            self._splash_logo = tk.PhotoImage(file=asset_file("mark_128.png"))   # same mark as everywhere
+            self._splash_logo = tk.PhotoImage(file=asset_file(                      # same mark as everywhere
+                "mark_light_128.png" if T.MODE == "light" else "mark_128.png"))
             tk.Label(box, image=self._splash_logo, bg=T.BG).pack(pady=(26, 8))
         except Exception:
             pass
         try:                                    # the logo's name lettering (same image everywhere)
-            self._splash_name = tk.PhotoImage(file=asset_file("wordmark_dark.png"))
+            self._splash_name = tk.PhotoImage(file=asset_file(
+                "wordmark_light.png" if T.MODE == "light" else "wordmark_dark.png"))
             tk.Label(box, image=self._splash_name, bg=T.BG).pack()
         except Exception:
             tk.Label(box, text="AmharicDictate", font=("Segoe UI Semibold", 20), fg=T.TEXT, bg=T.BG).pack()
         self._splash_profile = tk.Label(box, text="", font=("Ebrima", 10), fg=T.ACCENT_HI, bg=T.BG)
         self._splash_profile.pack(pady=(8, 0))
-        self._splash_text = tk.Label(box, text="Starting…", font=("Ebrima", 10), fg=T.MUTED, bg=T.BG,
+        self._splash_text = tk.Label(box, text="Opening Amharic Dictate…", font=("Ebrima", 10), fg=T.MUTED, bg=T.BG,
                                      wraplength=400, justify="center")
         self._splash_text.pack(pady=(2, 6))
-        # loading indicator: a moving sound wave (rounded bars), not a progress bar
-        self._wave = tk.Canvas(box, width=264, height=44, bg=T.BG, highlightthickness=0)
-        self._wave.pack(pady=(2, 0))
+        # how far along it is: a percentage that follows the start-up steps
+        # loading indicator: a moving sound wave (rounded bars) with the percentage beside it
+        self._pct, self._pct_span, self._pct_step = 0.0, (0, 18), 1
+        row = tk.Frame(box, bg=T.BG); row.pack(pady=(4, 0))
+        self._wave = tk.Canvas(row, width=264, height=44, bg=T.BG, highlightthickness=0)
+        self._wave.pack(side="left")
+        self._splash_pct = tk.Label(row, text="0%", font=("Segoe UI", 10), fg=T.ACCENT_HI, bg=T.BG,
+                                    width=5, anchor="w")
+        self._splash_pct.pack(side="left", padx=(6, 0))
         self._wave_bars = [self._wave.create_line(0, 0, 0, 0, width=6, capstyle="round", fill=T.ACCENT_HI)
                            for _ in range(22)]
         self._wave_t, self._wave_done = 0.0, False
@@ -356,10 +410,18 @@ class App:
                  fg=T.DIM, bg=T.BG).pack(side="bottom", pady=10)
         w.update_idletasks()
 
+    # each start-up step's share of the percentage; within a step it creeps toward the step's end
+    _STEP_SPANS = {1: (0, 20), 2: (20, 30), 3: (30, 95), 4: (95, 99)}
+    _STEP_SPEED = {1: 0.008, 2: 0.03, 3: 0.003, 4: 0.05}     # step 3 (the AI model) is the slow one
+
     def _animate_wave(self):
         import math
         if self._splash is None:
             return
+        lo, hi = self._pct_span
+        if not self._wave_done:
+            self._pct = max(self._pct, lo) + (hi - max(self._pct, lo)) * self._STEP_SPEED.get(self._pct_step, 0.01)
+            self._splash_pct.config(text=f"{int(self._pct)}%")
         self._wave_t += 0.16
         n = len(self._wave_bars)
         for i, bar in enumerate(self._wave_bars):
@@ -426,11 +488,11 @@ class App:
         m.configure(bg=bg)
         box = tk.Frame(m, bg=bg, padx=10, pady=6)
         box.pack(fill="both", expand=True)
-        self.mini_status = tk.Label(box, text="", fg="white", bg=bg, font=("Segoe UI", 10), anchor="w",
+        self.mini_status = tk.Label(box, text="", fg=T.TEXT, bg=bg, font=("Segoe UI", 10), anchor="w",
                                     cursor="fleur")
         self.mini_status.pack(side="left", padx=(0, 10))
         for label, cmd in (("⏸", self.toggle_pause), ("⤢ Show", self.restore), ("✓ Done", self.toggle)):
-            b = tk.Label(box, text=label, fg="white", bg=T.ACCENT if "Done" in label else T.BTN,
+            b = tk.Label(box, text=label, fg=T.ON_ACCENT if "Done" in label else T.TEXT, bg=T.ACCENT if "Done" in label else T.BTN,
                          font=("Segoe UI", 10), padx=8, pady=2, cursor="hand2")
             b.pack(side="left", padx=(0, 4))
             b.bind("<Button-1>", lambda e, c=cmd: c())
@@ -451,7 +513,7 @@ class App:
         paused = bool(self.engine and self.engine.paused)
         words = len((self.engine.committed_text() if self.engine else "").split())
         state = "⏸ Paused" if paused else ("● Listening" if self.active else "Amharic Dictate")
-        self.mini_status.config(text=f"{state}  ·  {words} words", fg=T.WARNING if paused else T.DANGER if self.active else "white")
+        self.mini_status.config(text=f"{state}  ·  {words} words", fg=T.WARNING if paused else T.DANGER if self.active else T.TEXT)
         self.mini_pause.config(text="▶" if paused else "⏸")
 
     def minimize(self):
@@ -512,13 +574,19 @@ class App:
         self.tray.icon = tray_image("busy")
         threading.Thread(target=self._load_model, daemon=True).start()
 
+    def _step(self, n, text):
+        """Start-up progress: 'Step 2 of 5 — Loading the Amharic dictionary…' (tray tooltip after start-up)."""
+        self.ui_q.put(("loading", f"Step {n} of 4 — {text}"))
+        self._step_times = getattr(self, "_step_times", []) + [(n, time.time())]   # start-up timing, for the log
+
     def _load_model(self):
+        self._step(1, "Starting the AI engine…")
         from engine import DictationEngine, Transcriber, ensure_model
         try:
             self.tray.title = f"{APP_TITLE} — loading the AI speech model…"     # no dictation box while loading
             path = ensure_model(self.cfg["model"], lambda s: self.ui_q.put(("loading", s)))
             os.environ["HF_HUB_OFFLINE"] = "1"   # everything is local from here on
-            self.ui_q.put(("loading", "Loading the Amharic dictionary…"))
+            self._step(2, "Loading the Amharic dictionary…")
             from textproc import lexicon
             lexicon()                                    # load the Amharic dictionary once
             level = self.cfg.get("auto_level", True)
@@ -527,8 +595,8 @@ class App:
             if profile:
                 self.ui_q.put(("profile", f"Voice profile: {profile}" +
                                ("" if adapter else "  (no voice training yet)")))
-            self.ui_q.put(("loading", f"Loading the AI model and {profile}'s voice profile…" if adapter
-                           else f"Loading {self.model_name()}…"))
+            self._step(3, f"Loading the AI model and {profile}'s voice profile… (the longest step)" if adapter
+                       else "Loading the AI speech model… (the longest step)")
             self._loaded_adapter = (str(adapter), os.path.getmtime(adapter)) if adapter else None
             transcriber = Transcriber(path, self.cfg["device"], self.cfg["quantize_cpu"],
                                       use_lm=self.cfg.get("lm_decoding", True),
@@ -539,12 +607,20 @@ class App:
                 self.ui_q.put(("profile", f"Voice profile: {profile}" +
                                (f"  — not used: {transcriber.profile_problem}" if transcriber.profile_problem
                                 else "  ✓ loaded")))
-            preview = None
+            # The fast live-preview copy is made after "Ready", in the background: dictation works at once
+            # (previews use the main model until the copy is ready, a few seconds later).
+            self.engine = DictationEngine(transcriber, self.cfg, self._on_partial, self._on_phrase, None)
             if transcriber.device == "cpu" and not self.cfg["quantize_cpu"] and self.cfg.get("fast_preview", True):
-                self.ui_q.put(("loading", "Preparing fast live preview…"))
-                preview = Transcriber(path, "cpu", True, auto_level=level,     # int8 copy: quick preview
-                                      adapter=adapter if not transcriber.profile_problem else None)
-            self.engine = DictationEngine(transcriber, self.cfg, self._on_partial, self._on_phrase, preview)
+                engine = self.engine
+
+                def make_preview():
+                    try:
+                        quick = Transcriber.quick_copy(transcriber)
+                        if self.engine is engine:
+                            engine.preview = quick
+                    except Exception:
+                        log_error(traceback.format_exc())
+                threading.Thread(target=make_preview, daemon=True).start()
             self.apply_my_words()
             self.apply_learning()
             here = os.path.dirname(os.path.abspath(__file__))
@@ -552,6 +628,7 @@ class App:
                 self.engine.decode_log = os.path.join(here, "decode_log.txt")
             if os.path.exists(os.path.join(here, "debug_audio.flag")):   # opt-in diagnostics
                 self.engine.debug_dir = os.path.join(here, "debug")
+            self._step(4, f"Turning on the {self.hotkey_label()} shortcut…")
             self._register_hotkeys()
             self.tray.icon = tray_image("ready")
             self.tray.title = f"{APP_TITLE} — {self.hotkey_label()}" + (f" — {profile}" if profile else "")
@@ -564,10 +641,17 @@ class App:
             else:
                 who = ""
             self.ui_q.put(("ready", f"Ready. Press {self.hotkey_label()} to dictate.", who))
+            st = getattr(self, "_step_times", [])
+            if st:
+                parts = [f"step {a}: {t2 - t1:.1f}s" for (a, t1), (_, t2) in zip(st, st[1:] + [(0, time.time())])]
+                log_error("Start-up timing: " + ", ".join(parts) + f" (total {time.time() - st[0][1]:.1f}s)")
+            self._step_times = []
         except Exception as e:
             log_error(traceback.format_exc())
             self.ui_q.put(("splash_close",))
-            self.ui_q.put(("show", f"Could not load the model: {e}", "Open Settings from the tray icon to pick another model."))
+            from diagnose import explain
+            what, todo = explain(e, "loading")
+            self.ui_q.put(("show", what, todo))
         finally:
             self.loading = False
 
@@ -581,11 +665,17 @@ class App:
         self.stream.start()
 
     def mic_acquire(self, who: str):
-        """Open the microphone while someone needs it (dictation or a training recording)."""
+        """Open the microphone while someone needs it (dictation or a training recording).
+        Raises NoMicrophone with a plain explanation when Windows has no microphone to give."""
         with self._mic_lock:
-            self._mic_users.add(who)
             if self.stream is None:
-                self._open_mic()
+                try:
+                    self._open_mic()
+                except Exception as e:
+                    self.stream = None
+                    log_error(f"Microphone: {e}")
+                    raise NoMicrophone(mic_problem()) from e
+            self._mic_users.add(who)
 
     def mic_release(self, who: str):
         """Close the microphone as soon as nothing needs it, so it is never on in the background."""
@@ -693,9 +783,23 @@ class App:
         if existing:
             name = existing[0]
         else:
+            # First run on this PC. The question must be visible: the dictation box is hidden and the
+            # start-up window stays on top, so ask over the start-up window and let it step back.
             from tkinter import simpledialog
+            parent = self._splash if getattr(self, "_splash", None) is not None else self.root
+            if getattr(self, "_splash", None) is not None:
+                self._splash_message("First time on this computer: type your name in the box to create your "
+                                     "voice profile.")
+            try:
+                parent.attributes("-topmost", False)
+            except Exception:
+                pass
             name = simpledialog.askstring(APP_TITLE, "Who's dictating?\n\nType your name to create your voice profile.",
-                                          initialvalue=default, parent=self.root) or default
+                                          initialvalue=default, parent=parent) or default
+            try:
+                parent.attributes("-topmost", True)
+            except Exception:
+                pass
             name = vp.create_profile(name)
         vp.migrate_old_voice_data(name)
         new = dict(self.cfg); new["profile"] = name
@@ -921,6 +1025,7 @@ class App:
     def apply_settings(self, new: dict):
         old = self.cfg
         self.root.after(100, lambda: self.tray.update_menu())        # e.g. show/hide Open history
+        self.root.after(150, lambda: self._watch_mode(once=True))     # appearance setting
         save_config(new)
         self.cfg = new
         try:
@@ -937,7 +1042,9 @@ class App:
                 self._register_hotkeys()
             except Exception as e:
                 log_error(traceback.format_exc())
-                self.ui_q.put(("show", f"Invalid hotkey: {e}", "Open Settings to fix it."))
+                from diagnose import explain
+                what, todo = explain(e, "hotkey")
+                self.ui_q.put(("show", what, todo))
                 return
         self.tray.title = f"{APP_TITLE} — {self.hotkey_label()}"
         self.ui_q.put(("notify", f"Settings saved. Hotkey: {self.hotkey_label()}"))
@@ -955,7 +1062,12 @@ class App:
             return
         try:
             if not self.active:
-                self.mic_acquire("dictation")
+                try:
+                    self.mic_acquire("dictation")
+                except NoMicrophone as e:
+                    self.ui_q.put(("show", "Can't use the microphone", str(e)))
+                    self.ui_q.put(("hide_after", 9000))
+                    return
                 self.word = None
                 if self.cfg.get("live_word", True) and self.cfg["insert"] == "on_stop":
                     from wordsync import WordSync, front_window_class, WORD_WINDOW_CLASS
@@ -1013,7 +1125,9 @@ class App:
                 self.mic_release("dictation")
             except Exception:
                 pass
-            self.ui_q.put(("show", f"Error: {e}", "Details are in the log (tray → Troubleshooting → Open technical log)."))
+            from diagnose import explain
+            what, todo = explain(e, "dictating")
+            self.ui_q.put(("show", what, todo))
         finally:
             self._toggle_lock.release()
 
@@ -1149,7 +1263,7 @@ class App:
                 w.destroy()
 
         def action(label, fn, color=T.BTN):
-            b = tk.Label(self.sugg_actions, text=label, fg="white", bg=color, font=("Segoe UI", 9),
+            b = tk.Label(self.sugg_actions, text=label, fg=T.on(color), bg=color, font=("Segoe UI", 9),
                          padx=7, pady=2, cursor="hand2")
             b.pack(side="left", padx=(0, 5))
             b.bind("<Button-1>", lambda e: fn())
@@ -1171,7 +1285,7 @@ class App:
             action("➕ Insert after", lambda: self._keep_and_insert("after"))
         for opt in options:
             family = self.text.cget("font").split(" ")[0].strip("{}") or "Ebrima"
-            b = tk.Label(self.sugg_chips, text=opt, fg="white", bg=T.CHIP, font=(family, 13),
+            b = tk.Label(self.sugg_chips, text=opt, fg=T.TEXT, bg=T.CHIP, font=(family, 13),
                          padx=8, pady=1, cursor="hand2")
             b.pack(side="left", padx=(0, 4))
             b.bind("<Button-1>", lambda e, o=opt: self._suggestion_chosen(o))
@@ -1237,6 +1351,10 @@ class App:
                 if kind == "loading":                # start-up progress: start-up window, or tray tooltip
                     if self._splash is not None:
                         self._splash_message(msg[1])
+                        m = re.match(r"Step (\d) of \d", msg[1])
+                        if m:
+                            self._pct_step = int(m.group(1))
+                            self._pct_span = self._STEP_SPANS.get(self._pct_step, self._pct_span)
                     else:
                         self.tray.title = f"{APP_TITLE} — {msg[1]}"
                 elif kind == "profile":
@@ -1245,6 +1363,8 @@ class App:
                 elif kind == "ready":
                     if self._splash is not None:     # first start: say so in the start-up window, then close it
                         self._wave_done = True
+                        self._pct = 100
+                        self._splash_pct.config(text="100%")
                         self._splash_message(msg[1])
                         self._close_splash(1800)
                     else:                            # reloaded later (new profile, settings): a notification
@@ -1322,7 +1442,7 @@ def selftest(out_path: str) -> int:
     lines, code = [], 0
     for mod in ("numpy", "torch", "sounddevice", "keyboard", "pyperclip", "pystray", "PIL",
                 "huggingface_hub", "engine", "textproc", "settings_ui", "lmdecode", "voiceprofile",
-                "voice_training", "train_local", "learning", "wordsync", "theme", "cmdspot", "updater",
+                "voice_training", "train_local", "learning", "wordsync", "theme", "cmdspot", "updater", "diagnose",
                 "win32com.client", "pythoncom"):
         try:
             __import__(mod)
@@ -1341,9 +1461,15 @@ def selftest(out_path: str) -> int:
         try:
             import numpy as np
             from engine import Transcriber
+            import time as _t0
+            t_load = _t0.time()
             tr = Transcriber(bundled, "cpu", False, use_lm=True)
+            lines.append(f"--   model load {_t0.time() - t_load:.1f}s")
             tr(np.zeros(16000, dtype=np.float32))
             lines.append(f"OK   built-in model ({bundled})")
+            import time as _t
+            t0 = _t.time(); quick = Transcriber.quick_copy(tr); quick(np.zeros(16000, dtype=np.float32))
+            lines.append(f"OK   live-preview copy made in memory ({_t.time() - t0:.1f}s)")
         except Exception as e:
             lines.append(f"FAIL built-in model: {e}"); code = 1
     else:
@@ -1355,9 +1481,13 @@ def selftest(out_path: str) -> int:
         app.open_settings(); app.root.update()
         app.open_training(); app.root.update()
         app._wave_done = True; app.root.update()
+        import theme as T                       # switch to light mode and back, as when Windows changes
+        for mode in ("light", "dark"):
+            old = T.palette(); T.use(mode); T.apply(app.root); T.recolor(app.root, old, T.palette())
+            app.root.update()
         app._close_splash(); app.root.update()
         app.root.destroy()
-        lines.append("OK   app windows (start-up, dictation box, settings, voice profiles)")
+        lines.append("OK   app windows (start-up, dictation box, settings, voice profiles, light/dark switch)")
     except Exception:
         lines.append("FAIL app windows: " + traceback.format_exc().replace("\n", " | ")); code = 1
     from textproc import finish_phrase
@@ -1378,7 +1508,16 @@ def main():
         train_local.run_and_exit(sys.argv[2:])
     if len(sys.argv) >= 3 and sys.argv[1] == "--selftest":
         sys.exit(selftest(sys.argv[2]))
-    if not single_instance():
+    if not single_instance():                  # already running: say so instead of doing nothing
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(
+                None, "Amharic Dictate is already running.\n\nLook for its round icon in the system tray, "
+                "next to the clock (click ^ if you don't see it).\n\nIf it doesn't respond, open Task Manager, "
+                "go to the Details tab, end every AmharicDictate.exe, then start it again.",
+                APP_TITLE, 0x40 | 0x40000)            # information icon, always on top
+        except Exception:
+            pass
         return
     # Running under pythonw has no console: send output to run.log next to the app
     if sys.stdout is None or sys.stderr is None or not sys.stdout.isatty():
