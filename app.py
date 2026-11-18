@@ -332,12 +332,36 @@ class App:
         self._splash_profile.pack(pady=(8, 0))
         self._splash_text = tk.Label(box, text="Starting…", font=("Ebrima", 10), fg=T.MUTED, bg=T.BG)
         self._splash_text.pack(pady=(2, 6))
-        self._splash_bar = ttk.Progressbar(box, mode="indeterminate", length=260)
-        self._splash_bar.pack()
-        self._splash_bar.start(12)
+        # loading indicator: a moving sound wave (rounded bars), not a progress bar
+        self._wave = tk.Canvas(box, width=264, height=44, bg=T.BG, highlightthickness=0)
+        self._wave.pack(pady=(2, 0))
+        self._wave_bars = [self._wave.create_line(0, 0, 0, 0, width=6, capstyle="round", fill=T.ACCENT_HI)
+                           for _ in range(22)]
+        self._wave_t, self._wave_done = 0.0, False
+        self._animate_wave()
         tk.Label(box, text=f"Version {APP_VERSION}  ·  works offline", font=("Segoe UI", 8),
                  fg=T.DIM, bg=T.BG).pack(side="bottom", pady=10)
         w.update_idletasks()
+
+    def _animate_wave(self):
+        import math
+        if self._splash is None:
+            return
+        self._wave_t += 0.16
+        n = len(self._wave_bars)
+        for i, bar in enumerate(self._wave_bars):
+            x = 12 + i * 12
+            if self._wave_done:                        # ready: the wave settles into a calm shape
+                h = 4 + 10 * math.exp(-((i - n / 2) / 5) ** 2)
+            else:
+                env = 0.35 + 0.65 * math.exp(-((i - n / 2) / 6.5) ** 2)
+                h = 3 + 17 * env * (0.5 + 0.5 * math.sin(self._wave_t * 1.7 - i * 0.55)) * \
+                    (0.6 + 0.4 * math.sin(self._wave_t * 0.9 + i * 0.9))
+            self._wave.coords(bar, x, 22 - h, x, 22 + h)
+        if not self._wave_done:
+            self._splash.after(40, self._animate_wave)
+        else:
+            self._wave.itemconfig("all", fill=T.ACCENT)
 
     def _splash_message(self, text):
         if self._splash is not None:
@@ -1136,8 +1160,7 @@ class App:
                         self._splash_profile.config(text=msg[1])
                 elif kind == "ready":
                     if self._splash is not None:     # first start: say so in the start-up window, then close it
-                        self._splash_bar.stop()
-                        self._splash_bar.config(mode="determinate", value=100)
+                        self._wave_done = True
                         self._splash_message(msg[1])
                         self._close_splash(1800)
                     else:                            # reloaded later (new profile, settings): a notification
