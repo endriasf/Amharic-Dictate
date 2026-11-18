@@ -5,6 +5,7 @@ and train a small personal add-on for that voice on this PC.
 Each profile lives in %APPDATA%\\AmharicDictate\\profiles\\<name>\\. Nothing leaves the computer.
 """
 
+import theme as T
 import json
 import os
 import subprocess
@@ -157,7 +158,7 @@ class VoiceTrainingWindow:
         ttk.Button(pb, text="Delete", command=self.delete_profile).pack(side="right")
         ttk.Button(pb, text="Import…", command=self.import_profile).pack(side="right", padx=4)
         ttk.Button(pb, text="Export…", command=self.export_profile).pack(side="right")
-        self.profile_info = ttk.Label(w, text="", padding=(10, 4), foreground="#245")
+        self.profile_info = ttk.Label(w, text="", padding=(10, 4), foreground=T.MUTED)
         self.profile_info.pack(fill="x")
 
         nb = ttk.Notebook(w)
@@ -168,14 +169,14 @@ class VoiceTrainingWindow:
         nb.add(rec, text="1. Setup reading")
         self.count_lbl = ttk.Label(rec, text="", font=("Segoe UI", 10))
         self.count_lbl.pack(anchor="w")
-        ttk.Label(rec, text="Read this sentence aloud, at your normal speed:", foreground="#555").pack(anchor="w", pady=(10, 2))
+        ttk.Label(rec, text="Read this sentence aloud, at your normal speed:", foreground=T.MUTED).pack(anchor="w", pady=(10, 2))
         self.sentence_lbl = tk.Label(rec, text="", font=(family, 20), wraplength=700, justify="left",
-                                     bg="#f4f4f4", padx=12, pady=12, anchor="w")
+                                     bg=T.FIELD, padx=12, pady=12, anchor="w")
         self.sentence_lbl.pack(fill="x")
-        self.meter = tk.Canvas(rec, height=10, bg="#ddd", highlightthickness=0)
+        self.meter = tk.Canvas(rec, height=10, bg=T.FIELD, highlightthickness=0)
         self.meter.pack(fill="x", pady=(10, 2))
-        self.meter_bar = self.meter.create_rectangle(0, 0, 0, 10, fill="#3ddc84", width=0)
-        self.msg = ttk.Label(rec, text="", foreground="#a33")
+        self.meter_bar = self.meter.create_rectangle(0, 0, 0, 10, fill=T.ACCENT_HI, width=0)
+        self.msg = ttk.Label(rec, text="", foreground=T.DANGER)
         self.msg.pack(anchor="w")
 
         btns = ttk.Frame(rec)
@@ -190,7 +191,7 @@ class VoiceTrainingWindow:
         ttk.Label(rec, text="Press Record, read the whole sentence at your normal speed, then press Stop. "
                             f"Setup needs {SETUP_CLIPS} sentences (about 5–10 minutes). Reading more later — up to "
                             f"{TARGET_CLIPS} — makes your profile more accurate. You can stop any time and continue later.",
-                  wraplength=700, foreground="#555").pack(anchor="w", pady=(6, 0))
+                  wraplength=700, foreground=T.MUTED).pack(anchor="w", pady=(6, 0))
 
         # ---------------- Train tab
         tr = ttk.Frame(nb, padding=12)
@@ -216,14 +217,14 @@ class VoiceTrainingWindow:
                            "changed, so other profiles are not affected. The add-on is only switched on if it is more "
                            "accurate for this voice than no profile, and it loads automatically when training ends. "
                            "You can keep using the app while it trains.",
-                  wraplength=700, foreground="#555").pack(anchor="w", pady=(8, 0))
+                  wraplength=700, foreground=T.MUTED).pack(anchor="w", pady=(8, 0))
 
         # ---------------- My words tab
         mw = ttk.Frame(nb, padding=12)
         nb.add(mw, text="3. My words")
         ttk.Label(mw, text="Names, places and terms you use (one per line). The app prefers these words, corrects "
                            "near-misses to them, and never marks them as misspelled. You can also click a word while "
-                           "dictating and press “★ My words”.", wraplength=720, foreground="#555").pack(anchor="w")
+                           "dictating and press “★ My words”.", wraplength=720, foreground=T.MUTED).pack(anchor="w")
         row = ttk.Frame(mw); row.pack(fill="x", pady=8)
         self.word_entry = tk.Entry(row, font=(family, 14))
         self.word_entry.pack(side="left", fill="x", expand=True)
@@ -246,7 +247,7 @@ class VoiceTrainingWindow:
                            "your corrected words are saved in this profile (on this computer only) and used the next "
                            "time the profile is trained. Sentences you cancel are never saved. Turn this off when "
                            "dictating confidential information if it must not be stored.",
-                  wraplength=720, foreground="#555").pack(anchor="w", padx=(22, 0))
+                  wraplength=720, foreground=T.MUTED).pack(anchor="w", padx=(22, 0))
         self.auto_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(lr, text=f"Retrain automatically after {AUTO_RETRAIN_AFTER} new corrections "
                                  "(in the background, when you are not dictating)",
@@ -454,11 +455,11 @@ class VoiceTrainingWindow:
             try:
                 self.app.mic_acquire("training")
             except Exception as e:
-                self.msg.config(text=f"Microphone error: {e}", foreground="#a33")
+                self.msg.config(text=f"Microphone error: {e}", foreground=T.DANGER)
                 return
             self.recording = True
             self.rec_btn.config(text="■  Stop")
-            self.msg.config(text="Recording… read the sentence, then press Stop.", foreground="#a33")
+            self.msg.config(text="Recording… read the sentence, then press Stop.", foreground=T.DANGER)
             self.play_btn.config(state="disabled")
             self.save_btn.config(state="disabled")
         else:
@@ -469,18 +470,18 @@ class VoiceTrainingWindow:
             dur = len(audio) / SR
             peak = float(np.abs(audio).max()) if len(audio) else 0.0
             if dur < 1.0:
-                self.msg.config(text="Too short — record the whole sentence.", foreground="#a33")
+                self.msg.config(text="Too short — record the whole sentence.", foreground=T.DANGER)
                 return
             self.last_audio = audio
             self.play_btn.config(state="normal")
             self.save_btn.config(state="normal")
             if peak < 0.02:
                 self.msg.config(text=f"Very quiet ({dur:.1f}s). Move closer to the mic or raise its volume, then re-record "
-                                     "— or save anyway.", foreground="#a60")
+                                     "— or save anyway.", foreground=T.WARNING)
             elif peak > 0.98:
-                self.msg.config(text=f"Too loud / distorted ({dur:.1f}s). Move back a little and re-record.", foreground="#a60")
+                self.msg.config(text=f"Too loud / distorted ({dur:.1f}s). Move back a little and re-record.", foreground=T.WARNING)
             else:
-                self.msg.config(text=f"Recorded {dur:.1f}s. Play it back, or Save & next.", foreground="#2a7")
+                self.msg.config(text=f"Recorded {dur:.1f}s. Play it back, or Save & next.", foreground=T.SUCCESS)
 
     def play(self):
         if self.last_audio is not None:

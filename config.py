@@ -147,6 +147,8 @@ def bring_to_front(win):
     """Open a window in front, without pinning it there: clicking another program brings that
     program forward as usual."""
     try:
+        from theme import dark_title_bar
+        dark_title_bar(win)
         win.lift()
         win.attributes("-topmost", True)
         win.after(400, lambda: win.winfo_exists() and win.attributes("-topmost", False))

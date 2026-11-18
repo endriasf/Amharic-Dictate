@@ -1,5 +1,6 @@
 """Settings window (tkinter)."""
 
+import theme as T
 import tkinter as tk
 from tkinter import ttk
 
@@ -69,7 +70,7 @@ def open_settings(root, cfg: dict, on_save):
         if " " in p and o not in seen:
             seen.add(o); items.append(f"“{p}” → {show(o)}")
     cmds = "   ".join(items)
-    ttk.Label(t, text=cmds, wraplength=420, foreground="#555").grid(row=1, column=0, columnspan=2, sticky="w", padx=28)
+    ttk.Label(t, text=cmds, wraplength=420, foreground=T.MUTED).grid(row=1, column=0, columnspan=2, sticky="w", padx=28)
     check(t, 2, "numbers_to_digits", "Write spoken numbers as digits (ሁለት መቶ ሀምሳ → 250)")
     check(t, 3, "auto_period", "Add ። automatically at the end of each phrase")
     check(t, 8, "spellcheck", "Underline words that look misspelled (red)")
@@ -85,7 +86,7 @@ def open_settings(root, cfg: dict, on_save):
     fs_var = tk.IntVar(value=fs_now)
     v["font_size"] = (fs_var, None)
     fs = ttk.Frame(t)
-    preview = tk.Label(t, text="ሰላም፣ እንዴት ነህ? ይህ የጽሑፍ መጠን ነው።", anchor="w", fg="white", bg="#202124",
+    preview = tk.Label(t, text="ሰላም፣ እንዴት ነህ? ይህ የጽሑፍ መጠን ነው።", anchor="w", fg="white", bg=T.FIELD,
                        padx=10, pady=6)
 
     def fs_update(*_):
@@ -120,15 +121,15 @@ def open_settings(root, cfg: dict, on_save):
         presets.append((cfg["model"], cfg["model"]))
     labeled(m, 0, "Model", combo(m, "model", presets))
     ttk.Label(m, text="You can also paste a Hugging Face model id or a local folder path.",
-              foreground="#555").grid(row=1, column=0, columnspan=2, sticky="w", padx=10)
+              foreground=T.MUTED).grid(row=1, column=0, columnspan=2, sticky="w", padx=10)
     labeled(m, 2, "Run on", combo(m, "device", DEVICES))
     check(m, 5, "auto_level", "Even out quiet or fading speech (automatic volume levelling)")
     check(m, 6, "lm_decoding", "Use the Amharic dictionary to pick words when audio is unclear")
     check(m, 3, "quantize_cpu", "Faster CPU mode (int8) — less accurate, for slow PCs")
     ttk.Label(m, text=f"{APP_NAME} {APP_VERSION} — all speech is processed on this computer.",
-              foreground="#555").grid(row=7, column=0, columnspan=2, sticky="w", padx=10, pady=(14, 4))
+              foreground=T.MUTED).grid(row=7, column=0, columnspan=2, sticky="w", padx=10, pady=(14, 4))
 
-    status = ttk.Label(win, text="", foreground="#b00")
+    status = ttk.Label(win, text="", foreground=T.DANGER)
     status.pack(anchor="w", padx=12)
 
     def save():

@@ -6,6 +6,7 @@ press the hotkey again: the text is pasted into the app you're working in.
 All speech is processed on this computer.
 """
 
+import theme as T
 import os
 import queue
 import sys
@@ -164,43 +165,44 @@ class App:
         # ---- overlay
         self.root = tk.Tk()
         self.root.title(APP_NAME)
+        T.apply(self.root)                      # dark green theme for every window
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
         self.root.attributes("-alpha", 0.94)
-        bg = "#1e1e1e"
+        bg = T.BG
         self.root.configure(bg=bg)
         frame = tk.Frame(self.root, bg=bg, padx=16, pady=10)
         frame.pack(fill="both", expand=True)
         top = tk.Frame(frame, bg=bg)
         top.pack(fill="x")
-        self.status = tk.Label(top, text="", fg="#9aa0a6", bg=bg, font=("Segoe UI", 9), anchor="w")
+        self.status = tk.Label(top, text="", fg=T.DIM, bg=bg, font=("Segoe UI", 9), anchor="w")
         self.status.pack(side="left", fill="x", expand=True)
-        mini_btn = tk.Label(top, text="—", fg="#c8c8c8", bg="#3a3a3a", font=("Segoe UI", 10, "bold"),
+        mini_btn = tk.Label(top, text="—", fg=T.MUTED, bg=T.BTN, font=("Segoe UI", 10, "bold"),
                             padx=9, pady=0, cursor="hand2")
         mini_btn.pack(side="right", padx=(10, 0))
         mini_btn.bind("<Button-1>", lambda e: self.minimize())
-        mini_btn.bind("<Enter>", lambda e: mini_btn.config(bg="#555"))
-        mini_btn.bind("<Leave>", lambda e: mini_btn.config(bg="#3a3a3a"))
-        self.meter = tk.Canvas(top, width=80, height=8, bg="#333", highlightthickness=0)
+        mini_btn.bind("<Enter>", lambda e: mini_btn.config(bg=T.BTN_HOVER))
+        mini_btn.bind("<Leave>", lambda e: mini_btn.config(bg=T.BTN))
+        self.meter = tk.Canvas(top, width=80, height=8, bg=T.FIELD, highlightthickness=0)
         self.meter.pack(side="right")
-        self.meter_bar = self.meter.create_rectangle(0, 0, 0, 8, fill="#3ddc84", width=0)
+        self.meter_bar = self.meter.create_rectangle(0, 0, 0, 8, fill=T.ACCENT_HI, width=0)
         # Read-only Text widget: wraps long dictation and auto-scrolls to the newest words
         self.text = tk.Text(frame, fg="white", bg=bg, wrap="word", height=3, bd=0, highlightthickness=0,
                             cursor="arrow", takefocus=0, padx=0, pady=4, spacing1=2)
         self.text.pack(fill="both", expand=True)
         self.text.config(state="disabled")
 
-        self.text.tag_configure("unsure", foreground="#ffc266", underline=True)
-        self.text.tag_configure("gap", foreground="#4fc3f7")
-        self.text.tag_configure("selected", background="#2f6fd6", foreground="white")
-        self.text.tag_configure("misspelled", foreground="#ff7b7b", underline=True)
+        self.text.tag_configure("unsure", foreground=T.WARNING, underline=True)
+        self.text.tag_configure("gap", foreground=T.INFO)
+        self.text.tag_configure("selected", background=T.SELECT, foreground="white")
+        self.text.tag_configure("misspelled", foreground=T.DANGER, underline=True)
         self._spell_cache = {}
 
         # Suggestion row: shown after clicking a word
         self.sugg = tk.Frame(frame, bg=bg)
         top = tk.Frame(self.sugg, bg=bg)
         top.pack(fill="x")
-        self.sugg_title = tk.Label(top, text="", fg="#9aa0a6", bg=bg, font=("Segoe UI", 9))
+        self.sugg_title = tk.Label(top, text="", fg=T.DIM, bg=bg, font=("Segoe UI", 9))
         self.sugg_title.pack(side="left", padx=(0, 6))
         self.sugg_chips = tk.Frame(top, bg=bg)           # suggested words
         self.sugg_chips.pack(side="left")
@@ -208,7 +210,7 @@ class App:
         row2.pack(fill="x", pady=(3, 0))
         self.sugg_actions = tk.Frame(row2, bg=bg)        # Remove / Join / Insert…
         self.sugg_actions.pack(side="left")
-        keep = tk.Label(row2, text="✕ Keep original", fg="white", bg="#3a3a3a", font=("Segoe UI", 9),
+        keep = tk.Label(row2, text="✕ Keep original", fg="white", bg=T.BTN, font=("Segoe UI", 9),
                         padx=8, pady=2, cursor="hand2")
         keep.pack(side="right")
         keep.bind("<Button-1>", lambda e: self._suggestion_chosen(None))
@@ -224,30 +226,30 @@ class App:
         bar_mid.pack(side="left", expand=True)
         self.buttons = {}
         for key, label, cmd, color in (
-            ("undo",   "↶ Undo",         self.undo,         "#3a3a3a"),
-            ("pause",  "⏸ Pause",        self.toggle_pause, "#3a3a3a"),
-            ("delete", "⌫ Delete word",  self.delete_word,  "#3a3a3a"),
-            ("copy",   "⧉ Copy",         self.copy_text,    "#3a3a3a"),
-            ("cancel", "✕ Cancel",       self.cancel,       "#5a2a2a"),
-            ("done",   "✓ Done",         self.toggle,       "#1f6f4a"),
+            ("undo",   "↶ Undo",         self.undo,         T.BTN),
+            ("pause",  "⏸ Pause",        self.toggle_pause, T.BTN),
+            ("delete", "⌫ Delete word",  self.delete_word,  T.BTN),
+            ("copy",   "⧉ Copy",         self.copy_text,    T.BTN),
+            ("cancel", "✕ Cancel",       self.cancel,       T.DANGER_BTN),
+            ("done",   "✓ Done",         self.toggle,       T.ACCENT),
         ):
             parent = bar_right if key in ("done", "cancel") else bar_left
             b = tk.Label(parent, text=label, fg="white", bg=color, font=("Segoe UI", 10),
                          padx=10, pady=4, cursor="hand2")
             b.pack(side="left", padx=(0, 6) if parent is bar_left else (6, 0))
             b.bind("<Button-1>", lambda e, c=cmd: c())
-            b.bind("<Enter>", lambda e, w=b: w.config(bg="#555"))
+            b.bind("<Enter>", lambda e, w=b: w.config(bg=T.BTN_HOVER))
             b.bind("<Leave>", lambda e, w=b, c=color: w.config(bg=c))
             self.buttons[key] = b
 
         # punctuation buttons (more reliable than saying the command)
         for mark in ("።", "፣", "፤", "?", "!", "«", "»", "(", ")"):
-            pb = tk.Label(bar_mid, text=mark, fg="white", bg="#2f3b4a", font=("Nyala", 14, "bold"),
+            pb = tk.Label(bar_mid, text=mark, fg="white", bg=T.BTN, font=("Nyala", 14, "bold"),
                           width=2, cursor="hand2")
             pb.pack(side="left", padx=2)
             pb.bind("<Button-1>", lambda e, m=mark: self.engine and self.active and self.engine.add_punctuation(m))
-            pb.bind("<Enter>", lambda e, w=pb: w.config(bg="#555"))
-            pb.bind("<Leave>", lambda e, w=pb: w.config(bg="#2f3b4a"))
+            pb.bind("<Enter>", lambda e, w=pb: w.config(bg=T.BTN_HOVER))
+            pb.bind("<Leave>", lambda e, w=pb: w.config(bg=T.BTN))
 
         # click a word to remove it; the next thing you say replaces it
         self.text.bind("<Button-1>", self._on_text_click)
@@ -323,7 +325,7 @@ class App:
                                     cursor="fleur")
         self.mini_status.pack(side="left", padx=(0, 10))
         for label, cmd in (("⏸", self.toggle_pause), ("⤢ Show", self.restore), ("✓ Done", self.toggle)):
-            b = tk.Label(box, text=label, fg="white", bg="#1f6f4a" if "Done" in label else "#3a3a3a",
+            b = tk.Label(box, text=label, fg="white", bg=T.ACCENT if "Done" in label else T.BTN,
                          font=("Segoe UI", 10), padx=8, pady=2, cursor="hand2")
             b.pack(side="left", padx=(0, 4))
             b.bind("<Button-1>", lambda e, c=cmd: c())
@@ -344,7 +346,7 @@ class App:
         paused = bool(self.engine and self.engine.paused)
         words = len((self.engine.committed_text() if self.engine else "").split())
         state = "⏸ Paused" if paused else ("● Listening" if self.active else "Amharic Dictate")
-        self.mini_status.config(text=f"{state}  ·  {words} words", fg="#ffcc66" if paused else "#ff6b6b" if self.active else "white")
+        self.mini_status.config(text=f"{state}  ·  {words} words", fg=T.WARNING if paused else T.DANGER if self.active else "white")
         self.mini_pause.config(text="▶" if paused else "⏸")
 
     def minimize(self):
@@ -969,7 +971,7 @@ class App:
             for w in holder.winfo_children():
                 w.destroy()
 
-        def action(label, fn, color="#3a3a3a"):
+        def action(label, fn, color=T.BTN):
             b = tk.Label(self.sugg_actions, text=label, fg="white", bg=color, font=("Segoe UI", 9),
                          padx=7, pady=2, cursor="hand2")
             b.pack(side="left", padx=(0, 5))
@@ -980,19 +982,19 @@ class App:
             action("⌫ Join words (remove space)", self._join_words)
         elif is_mark:
             self.sugg_title.config(text="Change to:")
-            action("🗑 Remove", self._remove_clicked, "#5a2a2a")
+            action("🗑 Remove", self._remove_clicked, T.DANGER_BTN)
         else:
             self.sugg_title.config(text=("Say it again, or pick:" if options else "Say the word again"))
-            action("🗑 Remove", self._remove_clicked, "#5a2a2a")
+            action("🗑 Remove", self._remove_clicked, T.DANGER_BTN)
             action("⇤ Join previous", lambda: self._join_clicked("prev"))
             action("Join next ⇥", lambda: self._join_clicked("next"))
             if self.cfg.get("profile"):
-                action("★ My words", lambda w=word: self._add_my_word(w), "#2a4a5a")
+                action("★ My words", lambda w=word: self._add_my_word(w), T.CHIP)
             action("➕ Insert before", lambda: self._keep_and_insert("before"))
             action("➕ Insert after", lambda: self._keep_and_insert("after"))
         for opt in options:
             family = self.text.cget("font").split(" ")[0].strip("{}") or "Ebrima"
-            b = tk.Label(self.sugg_chips, text=opt, fg="white", bg="#264a73", font=(family, 13),
+            b = tk.Label(self.sugg_chips, text=opt, fg="white", bg=T.CHIP, font=(family, 13),
                          padx=8, pady=1, cursor="hand2")
             b.pack(side="left", padx=(0, 4))
             b.bind("<Button-1>", lambda e, o=opt: self._suggestion_chosen(o))
@@ -1118,7 +1120,7 @@ def selftest(out_path: str) -> int:
     lines, code = [], 0
     for mod in ("numpy", "torch", "sounddevice", "keyboard", "pyperclip", "pystray", "PIL",
                 "huggingface_hub", "engine", "textproc", "settings_ui", "lmdecode", "voiceprofile",
-                "voice_training", "train_local", "learning", "wordsync", "win32com.client", "pythoncom"):
+                "voice_training", "train_local", "learning", "wordsync", "theme", "win32com.client", "pythoncom"):
         try:
             __import__(mod)
             lines.append(f"OK   {mod}")
