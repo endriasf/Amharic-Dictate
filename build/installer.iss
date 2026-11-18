@@ -58,7 +58,8 @@ Source: "..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
 Name: "{group}\Amharic Dictate"; Filename: "{app}\AmharicDictate.exe"
 Name: "{group}\Amharic Dictate guide"; Filename: "{app}\Amharic Dictate guide.html"
-Name: "{group}\Uninstall Amharic Dictate"; Filename: "{uninstallexe}"
+; No "Uninstall" shortcut: Windows 10/11 hide them on purpose. Uninstall from Settings → Apps → Installed apps,
+; or right-click Amharic Dictate in the Start menu → Uninstall.
 Name: "{userdesktop}\Amharic Dictate"; Filename: "{app}\AmharicDictate.exe"
 
 [Run]
