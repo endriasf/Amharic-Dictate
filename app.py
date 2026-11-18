@@ -273,6 +273,7 @@ class App:
                 pystray.MenuItem("Delete last word", lambda: self.delete_word()),
                 pystray.MenuItem("Settings…", lambda: self.ui_q.put(("settings",))),
                 pystray.MenuItem("Voice profiles…", lambda: self.ui_q.put(("train",))),
+                pystray.MenuItem("How to use…", lambda: self.ui_q.put(("guide",))),
                 pystray.MenuItem("Open history", lambda: self._open_file("history.txt")),
                 pystray.MenuItem("Open log", lambda: self._open_file("error.log")),
                 pystray.MenuItem(f"Quit {APP_NAME}", lambda: self.quit()),
@@ -591,6 +592,16 @@ class App:
             "Everything you dictate stays on this computer.\n\n"
             "Created by Endrias F. Abitte",
             parent=self.root)
+
+    def open_guide(self):
+        from config import guide_file
+        path = guide_file()
+        if path:
+            os.startfile(path)                       # opens in the default browser, offline
+        else:
+            from tkinter import messagebox
+            messagebox.showinfo(APP_NAME, "The user guide wasn't found. It is also on the project's GitHub page.",
+                                parent=self.root)
 
     def open_training(self):
         from voice_training import VoiceTrainingWindow
@@ -1067,6 +1078,8 @@ class App:
                     self.open_training()
                 elif kind == "about":
                     self.show_about()
+                elif kind == "guide":
+                    self.open_guide()
                 elif kind == "bar":
                     if not msg[1] and self._minimized:          # dictation finished: back to normal
                         self._minimized = False

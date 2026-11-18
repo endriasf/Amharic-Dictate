@@ -19,6 +19,19 @@ def bundled_model_dir():
     return None
 
 
+def guide_file():
+    """The offline user guide (assets/guide.html), installed app or source folder."""
+    import sys
+    bases = [getattr(sys, "_MEIPASS", None), os.path.dirname(os.path.abspath(__file__))]
+    if getattr(sys, "frozen", False):
+        bases.insert(0, os.path.dirname(sys.executable))
+    for base in bases:
+        for rel in ("guide.html", os.path.join("assets", "guide.html")):
+            if base and os.path.isfile(os.path.join(base, rel)):
+                return os.path.join(base, rel)
+    return None
+
+
 MODEL_PRESETS = [
     ("badrex/Ethio-ASR-amharic", "Ethio-ASR Amharic — best accuracy (non-commercial license)"),
     ("badrex/Ethio-ASR-multilingual-94M", "Ethio-ASR 94M — fastest, for older PCs (non-commercial)"),

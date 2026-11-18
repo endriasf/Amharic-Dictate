@@ -48,3 +48,6 @@ See [cloud/README_CLOUD.md](cloud/README_CLOUD.md). The model card template for 
 - Text can't be typed into programs running as Administrator unless Amharic Dictate also runs
   elevated.
 - No automatic punctuation yet: use voice commands or the punctuation buttons.
+
+## User guide
+The app's offline guide (tray → How to use…, Start menu → Amharic Dictate guide) is `assets/guide.html`, built from the user part of README.md. After editing README.md run `python tools/make_guide.py` (needs `pip install markdown`) and commit both files.

@@ -36,6 +36,7 @@ pyinstaller --noconfirm --clean --windowed `
   --hidden-import pystray._win32 `
   --add-data "amharic_words.tsv;." `
   --add-data "training_sentences.txt;." `
+  --add-data "assets\guide.html;assets" `
   --hidden-import voiceprofile --hidden-import voice_training --hidden-import train_local `
   --hidden-import learning --hidden-import lmdecode --hidden-import wordsync --hidden-import cmdspot `
   --hidden-import win32com.client --hidden-import pythoncom --hidden-import pywintypes `

@@ -31,10 +31,12 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
 [Files]
 Source: "..\dist\AmharicDictate\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\assets\guide.html"; DestDir: "{app}"; DestName: "Amharic Dictate guide.html"; Flags: ignoreversion
 Source: "..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Amharic Dictate"; Filename: "{app}\AmharicDictate.exe"
+Name: "{group}\Amharic Dictate guide"; Filename: "{app}\Amharic Dictate guide.html"
 Name: "{group}\Uninstall Amharic Dictate"; Filename: "{uninstallexe}"
 Name: "{userdesktop}\Amharic Dictate"; Filename: "{app}\AmharicDictate.exe"; Tasks: desktopicon
 

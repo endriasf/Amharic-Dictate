@@ -23,7 +23,7 @@ Free and open source.
 ### Download
 - **Microsoft Store** (recommended): search for **Amharic Dictate**, then click **Get**.
 - **Or** download **AmharicDictate-Setup.exe** from the
-  [Releases page](https://github.com/endriasf/amharic-dictate/releases) and run it.
+  [Releases page](https://github.com/endriasf/Amharic-Dictate/releases) and run it.
   No administrator rights are needed. If Windows shows *"Windows protected your PC"*, click
   **More info → Run anyway**.
 
