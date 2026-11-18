@@ -693,9 +693,20 @@ class App:
         if existing:
             name = existing[0]
         else:
+            # First run on this PC. The question must be visible: the dictation box is hidden and the
+            # start-up window stays on top, so ask over the start-up window and let it step back.
             from tkinter import simpledialog
+            parent = self._splash if getattr(self, "_splash", None) is not None else self.root
+            try:
+                parent.attributes("-topmost", False)
+            except Exception:
+                pass
             name = simpledialog.askstring(APP_TITLE, "Who's dictating?\n\nType your name to create your voice profile.",
-                                          initialvalue=default, parent=self.root) or default
+                                          initialvalue=default, parent=parent) or default
+            try:
+                parent.attributes("-topmost", True)
+            except Exception:
+                pass
             name = vp.create_profile(name)
         vp.migrate_old_voice_data(name)
         new = dict(self.cfg); new["profile"] = name
