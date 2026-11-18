@@ -59,6 +59,52 @@ def png(svg_text, px, path):
     os.unlink(f.name)
 
 
+LIGHT_STITCH = {"#F4EBD0": "#1E7A4E", "#E2B14A": "#C9952E", "#16603F": "#F4EBD0"}   # mark on white
+
+
+def light_mark():
+    m = mark()
+    for a, b in LIGHT_STITCH.items():
+        m = m.replace(a, "\0" + b)
+    return m.replace("\0", "")
+
+
+def name_text(x, y, size, on_dark=True, anchor="start"):
+    """THE way the name is written in the logo everywhere: one word, AmharicDictate — "Amharic" medium
+    + "Dictate" light green, no space (Poppins)."""
+    a, d = ("#FFFFFF", "#5CC08A") if on_dark else ("#0F3D2A", "#1E7A4E")
+    return (f'<text x="{x}" y="{y}" font-family="Poppins" font-size="{size}" letter-spacing="-0.5" '
+            f'text-anchor="{anchor}" xml:space="preserve"><tspan font-weight="500" fill="{a}">Amharic</tspan>'
+            f'<tspan font-weight="300" fill="{d}">Dictate</tspan></text>')
+
+
+def render(svg_text, w, h, path):
+    with tempfile.NamedTemporaryFile("w", suffix=".svg", delete=False) as f:
+        f.write(svg_text)
+    subprocess.run(["rsvg-convert", "-w", str(w), "-h", str(h), f.name, "-o", path], check=True)
+    os.unlink(f.name)
+
+
+def lockups():
+    W, H = 900, 220                                   # mark + name on one line
+    for on_dark, suffix in ((True, "dark"), (False, "light")):
+        m = mark() if on_dark else light_mark()
+        body = f'<g transform="translate(10 10)">{m}</g>{name_text(236, 134, 74, on_dark)}'
+        render(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}">{body}</svg>', W, H,
+               os.path.join(A, f"banner_{suffix}.png"))
+    # name only, for the app's start-up window (dark)
+    render(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 56">{name_text(180, 42, 40, True, "middle")}</svg>',
+           360, 56, os.path.join(A, "wordmark_dark.png"))
+    # link preview for GitHub (1280 x 640)
+    m = mark()
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640"><rect width="1280" height="640" fill="{DARK}"/>'
+           f'<g opacity=".12" transform="translate(-180 260) scale(3.2)">{m}</g>'
+           f'<g transform="translate(120 170) scale(1.5)">{m}</g>{name_text(460, 345, 92, True)}'
+           f'<text x="464" y="410" font-family="Poppins" font-size="30" fill="#CFE8DB">AI-powered Amharic dictation for Windows</text>'
+           f'<text x="464" y="455" font-family="Poppins" font-size="24" fill="#8FB8A3">Free · runs fully offline</text></svg>')
+    render(svg, 1280, 640, os.path.join(A, "social_preview.png"))
+
+
 def main():
     os.makedirs(ART, exist_ok=True)
     big_tile, mid_tile, small_tile = tile(mark()), tile(mid_mark()), tile(small_mark())
@@ -76,6 +122,7 @@ def main():
         png(tile(small_mark(center=c2), c1, c2, "circle"), 64, os.path.join(A, f"tray_{state}.png"))
     for pct, px in ((100, 58), (150, 87), (200, 116)):  # installer corner icon
         png(mid_tile if px < 100 else big_tile, px, os.path.join(ART, f"icon-{pct}.png"))
+    lockups()
     print("logo files written")
 
 

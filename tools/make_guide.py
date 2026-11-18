@@ -81,7 +81,7 @@ footer .row{{display:flex;align-items:center;gap:10px}} footer svg{{width:26px;h
 @media (max-width:620px){{nav ul{{columns:1}} .name{{font-size:30px}} .mark{{width:68px;height:68px}}}}
 </style></head><body>
 <header class="hero">{ring}<div class="wrap"><div class="brand">{logo}<div>
-  <div class="name"><b>Amharic</b><span> Dictate</span></div>
+  <div class="name"><b>Amharic</b><span>Dictate</span></div>
   <div class="sub">How to use · Version {APP_VERSION}</div>
   <div class="pill">AI model: Amharic Speech-to-Text EFA v1 · works fully offline</div>
 </div></div></div></header>

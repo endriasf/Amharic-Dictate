@@ -333,9 +333,11 @@ class App:
             tk.Label(box, image=self._splash_logo, bg=T.BG).pack(pady=(26, 8))
         except Exception:
             pass
-        name = tk.Frame(box, bg=T.BG); name.pack()
-        tk.Label(name, text="Amharic", font=("Segoe UI Semibold", 20), fg=T.TEXT, bg=T.BG).pack(side="left")
-        tk.Label(name, text=" Dictate", font=("Segoe UI Light", 20), fg=T.ACCENT_HI, bg=T.BG).pack(side="left")
+        try:                                    # the logo's name lettering (same image everywhere)
+            self._splash_name = tk.PhotoImage(file=asset_file("wordmark_dark.png"))
+            tk.Label(box, image=self._splash_name, bg=T.BG).pack()
+        except Exception:
+            tk.Label(box, text="AmharicDictate", font=("Segoe UI Semibold", 20), fg=T.TEXT, bg=T.BG).pack()
         self._splash_profile = tk.Label(box, text="", font=("Ebrima", 10), fg=T.ACCENT_HI, bg=T.BG)
         self._splash_profile.pack(pady=(8, 0))
         self._splash_text = tk.Label(box, text="Starting…", font=("Ebrima", 10), fg=T.MUTED, bg=T.BG)
