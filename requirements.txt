@@ -4,7 +4,7 @@ keyboard
 pyperclip
 pystray
 pillow
-transformers>=5.10,<6
+transformers>=5.23.0,<6
 huggingface_hub
 safetensors
 pywin32; sys_platform == "win32"
