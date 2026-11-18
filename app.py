@@ -406,7 +406,7 @@ class App:
     def _load_model(self):
         from engine import DictationEngine, Transcriber, ensure_model
         try:
-            self.ui_q.put(("show", "Loading Amharic speech model…", ""))
+            self.tray.title = f"{APP_NAME} — loading the speech model…"     # no dictation box while loading
             t0 = time.time()
             path = ensure_model(self.cfg["model"], lambda s: self.ui_q.put(("status", s)))
             os.environ["HF_HUB_OFFLINE"] = "1"   # everything is local from here on
@@ -445,9 +445,7 @@ class App:
                 who = f"Profile: {profile} (no voice training yet)"
             else:
                 who = ""
-            self.ui_q.put(("show", f"Ready on {transcriber.device.upper()} ({time.time() - t0:.0f}s). "
-                                   f"Press {self.hotkey_label()} to dictate.", who))
-            self.ui_q.put(("hide_after", 3000))
+            self.ui_q.put(("notify", f"Ready. Press {self.hotkey_label()} to dictate." + (f"\n{who}" if who else "")))
         except Exception as e:
             log_error(traceback.format_exc())
             self.ui_q.put(("show", f"Could not load the model: {e}", "Open Settings from the tray icon to pick another model."))
@@ -543,9 +541,8 @@ class App:
         new = count_corrections(d) - int(meta.get("last_trained_corrections", 0))
         if new >= vt.AUTO_RETRAIN_AFTER and total >= vt.MIN_CLIPS:
             vt.launch_training(self.cfg, profile)
-            self.ui_q.put(("show", "Improving your voice profile in the background…",
-                           f"Learning from {new} new corrections. You can keep working."))
-            self.ui_q.put(("hide_after", 3500))
+            self.ui_q.put(("notify", f"Improving your voice profile in the background from {new} new corrections. "
+                                     "You can keep working."))
 
     def _check_profile_update(self):
         """Load a voice profile as soon as its background training finishes (when not dictating)."""
@@ -779,7 +776,7 @@ class App:
                 self.ui_q.put(("show", f"Invalid hotkey: {e}", "Open Settings to fix it."))
                 return
         self.tray.title = f"{APP_NAME} — {self.hotkey_label()}"
-        self.ui_q.put(("show", "Settings saved", f"Hotkey: {self.hotkey_label()}"))
+        self.ui_q.put(("notify", f"Settings saved. Hotkey: {self.hotkey_label()}"))
         self.ui_q.put(("hide_after", 2000))
 
     # ---------- dictation
@@ -1070,7 +1067,12 @@ class App:
             while True:
                 msg = self.ui_q.get_nowait()
                 kind = msg[0]
-                if kind == "show":
+                if kind == "notify":                 # Windows notification, no dictation box
+                    try:
+                        self.tray.notify(msg[1], APP_NAME)
+                    except Exception:
+                        pass
+                elif kind == "show":
                     if self._minimized and self.active:
                         self.status.config(text=msg[1])
                     else:
