@@ -58,6 +58,7 @@ The text also stays on the clipboard, so you can paste it again with **Ctrl + V*
 ### Live dictation into Microsoft Word
 When you start dictating while **Word** is the active window, your words go **straight into the
 document** as you speak, at the cursor:
+
 - Corrections you make in the dictation box (replace, remove, insert, join, punctuation, Undo)
   update the document immediately.
 - You can also edit the dictated text **directly in Word**; the dictation box updates to match.
@@ -129,6 +130,7 @@ In the dictation box, while you are still dictating:
 - **Click a punctuation mark:** remove it, or change it to another mark.
 
 Colours in the box:
+
 - **Red underline:** probably misspelled. Click the word to see corrections.
 - **Orange:** the app wasn't sure it heard this word correctly.
 
@@ -145,6 +147,7 @@ profile. To add another person, open **Voice profiles…** and click **New…** 
 
 ### 5b. Train the app to your voice
 **Step 1: record the setup reading** (tab **1. Setup reading**)
+
 1. A sentence is shown. Press **● Record** and read it aloud at your normal speed.
 2. Press **■ Stop** when you finish.
 3. Press **▶ Play back** to check it. If you stumbled, press **● Re-record**.
@@ -156,6 +159,7 @@ The level bar shows your microphone volume. The window warns you if a recording 
 too loud.
 
 **Step 2: train** (tab **2. Train profile**)
+
 1. Click **Start training**. It runs in the background, usually for **15–40 minutes**. You can keep
    working, and even keep dictating.
 2. When it finishes, the app compares your voice profile with no profile on recordings it did not
@@ -169,6 +173,7 @@ uses all your recordings.
 ### 5c. Add your own words (My words)
 For names, places, organisations and terms the app gets wrong or underlines in red. There are two
 ways to add them:
+
 - **While dictating:** click the word in the dictation box, then click **★ My words**.
 - **In the window:** open tab **3. My words**, type the word (or several words), then press
   **Add** or Enter.
@@ -203,6 +208,7 @@ Click **Export…** to save the profile as a .zip file. On the other computer, o
 ## 6. Settings
 
 Tray icon → **Settings**:
+
 - Hotkeys and push-to-talk
 - How text is inserted: when you finish (default), after each sentence, or to the clipboard only
 - Spelling check and automatic spelling fixes

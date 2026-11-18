@@ -50,4 +50,4 @@ See [cloud/README_CLOUD.md](cloud/README_CLOUD.md). The model card template for 
 - No automatic punctuation yet: use voice commands or the punctuation buttons.
 
 ## User guide
-The app's offline guide (tray → How to use…, Start menu → Amharic Dictate guide) is `assets/guide.html`, built from the user part of README.md. After editing README.md run `python tools/make_guide.py` (needs `pip install markdown`) and commit both files.
+The app's offline guide (tray → How to use…, Start menu → Amharic Dictate guide) is `assets/guide.html`, built from the user part of README.md. After editing README.md run `python tools/make_guide.py` (needs `pip install markdown fonttools` and the free Poppins font; set `POPPINS_DIR` if it is not in the default folder) and commit both files.
