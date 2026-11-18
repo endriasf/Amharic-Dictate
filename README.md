@@ -5,6 +5,10 @@
   </picture>
 </p>
 
+<p align="center">
+  <a href="https://apps.microsoft.com/detail/9PHVG1FNGJH4?mode=direct"><img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200" alt="Get it from Microsoft"></a>
+</p>
+
 # Amharic Dictate
 
 **Free, offline Amharic dictation for Windows, powered by the Amharic Speech-to-Text EFA v1 AI speech model.** Speak Amharic and your words appear
@@ -29,8 +33,9 @@ Free and open source.
 - A microphone. A headset gives the best results.
 
 ### Download
-- **Microsoft Store** (recommended): open the Microsoft Store, search for **Amharic Dictate**, then
-  click **Get**. The Store version is signed by Microsoft and updates itself.
+- **Microsoft Store** (recommended): [get Amharic Dictate from the Microsoft Store](https://apps.microsoft.com/detail/9PHVG1FNGJH4), or
+  search for **Amharic Dictate** in the Store app, then click **Get**. The Store version is signed
+  by Microsoft and updates itself.
 - **Or** download **AmharicDictate-Setup-2.4.0.exe** from the
   [Releases page](https://github.com/endriasf/Amharic-Dictate/releases) and run it — for PCs where
   the Microsoft Store isn't available. No administrator rights are needed. Windows may show
