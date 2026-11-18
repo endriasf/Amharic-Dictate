@@ -341,7 +341,7 @@ class App:
         self._reload_model()
         self.root.after(50, self._pump_ui)
         self.root.after(60_000, self._schedule_update_checks)            # a minute after start-up
-        self.root.after(3000, self._watch_mode)
+        self.root.after(1000, self._watch_mode)
 
     # ---------- light / dark mode: follow Windows while the app runs
     def _watch_mode(self, once=False):
@@ -354,6 +354,14 @@ class App:
             for w in self.root.winfo_children():
                 if w.winfo_class() == "Toplevel":
                     T.dark_title_bar(w)
+            if getattr(self, "_splash", None) is not None:      # start-up window: light/dark logo too
+                try:
+                    from config import asset_file
+                    light = T.MODE == "light"
+                    self._splash_logo.configure(file=asset_file("mark_light_128.png" if light else "mark_128.png"))
+                    self._splash_name.configure(file=asset_file("wordmark_light.png" if light else "wordmark_dark.png"))
+                except Exception:
+                    pass
         if not once:
             self.root.after(3000, self._watch_mode)
 
