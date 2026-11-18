@@ -34,7 +34,7 @@ CloseApplications=yes
 WizardStyle=modern dark hidebevels includetitlebar
 WizardBackColor=#0F3D2A
 WizardBackImageFile=art\background-100.png,art\background-150.png,art\background-200.png
-WizardImageFile=
+WizardImageFile=art\welcome-100.png,art\welcome-150.png,art\welcome-200.png
 WizardSmallImageFile=art\icon-100.png,art\icon-150.png,art\icon-200.png
 ; ---- pages: Welcome -> Licence (scroll, accept) -> Installing (percentage, size) -> Finished
 DisableWelcomePage=no
@@ -45,6 +45,8 @@ DisableReadyPage=yes
 [Messages]
 WelcomeLabel1=Welcome to Amharic Dictate
 WelcomeLabel2=Free, offline Amharic dictation for Windows.%n%nAmharic Dictate {#AppVersion} needs about {#AppSizeMB} MB of disk space. It installs for your Windows account only and doesn't need administrator rights.%n%nClick Next to continue.
+FinishedHeadingLabel=Amharic Dictate is ready
+FinishedLabel=Setup has finished installing Amharic Dictate.%n%nFind it in the Start menu or on your desktop.
 
 [Files]
 Source: "..\dist\AmharicDictate\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
