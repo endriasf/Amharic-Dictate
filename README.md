@@ -1,3 +1,5 @@
+<img src="assets/logo_256.png" width="96" alt="Amharic Dictate logo">
+
 # Amharic Dictate
 
 **Free, offline Amharic dictation for Windows.** Speak Amharic and your words appear as text in

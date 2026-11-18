@@ -37,6 +37,8 @@ pyinstaller --noconfirm --clean --windowed `
   --add-data "amharic_words.tsv;." `
   --add-data "training_sentences.txt;." `
   --add-data "assets\guide.html;assets" `
+  --add-data "assets\logo_256.png;assets" `
+  --add-data "assets\tray_*.png;assets" `
   --hidden-import voiceprofile --hidden-import voice_training --hidden-import train_local `
   --hidden-import learning --hidden-import lmdecode --hidden-import wordsync --hidden-import cmdspot --hidden-import theme `
   --hidden-import win32com.client --hidden-import pythoncom --hidden-import pywintypes `
@@ -54,7 +56,9 @@ if ($p.ExitCode -ne 0) { throw "Self-test failed" }
 
 $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
 if (Test-Path $iscc) {
-  & $iscc "/DAppVersion=$version" build\installer.iss
+  $sizeMB = [int]((Get-ChildItem dist\AmharicDictate -Recurse -File | Measure-Object Length -Sum).Sum / 1MB)
+  & $iscc "/DAppVersion=$version" "/DAppSizeMB=$sizeMB" build\installer.iss
+  if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed (needs version 6.7 or newer)" }
   Write-Host "Installer: build\Output\AmharicDictate-Setup-$version.exe"
 } else {
   Write-Host "Inno Setup not found; skipping installer. App folder: dist\AmharicDictate"

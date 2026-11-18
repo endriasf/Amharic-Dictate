@@ -6,11 +6,14 @@ import markdown
 
 here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 readme = open(os.path.join(here, "README.md"), encoding="utf-8").read()
-user = readme[: readme.index("## Licence and credits")]          # stop before developer-facing parts
+user = readme[: readme.index("## Licence and credits")]
+user = re.sub(r"^<img [^>]*>\s*", "", user, flags=re.M)                  # the logo is added below          # stop before developer-facing parts
 user = re.sub(r"\n## 1\. Install.*?(?=\n## 2\.)", "\n", user, flags=re.S)  # already installed
 user = re.sub(r"^(#{2,3}) \d+[a-e]?\. ", r"\1 ", user, flags=re.M)          # no section numbers
 user = user.replace("# Amharic Dictate", "# Amharic Dictate — how to use", 1)
 body = markdown.markdown(user, extensions=["tables", "sane_lists", "toc"])
+logo = open(os.path.join(here, "assets", "logo_tile.svg"), encoding="utf-8").read().replace(
+    'width="200" height="200"', 'width="72" height="72"')
 toc = "".join(f'<li><a href="#{m.group(1)}">{html.escape(re.sub("<.*?>", "", m.group(2)))}</a></li>'
               for m in re.finditer(r'<h2 id="([^"]+)">(.*?)</h2>', body))
 page = f"""<!DOCTYPE html>
@@ -28,7 +31,7 @@ nav ul{{margin:.3em 0;padding-left:1.2em}} a{{color:#0b62c4}} hr{{border:0;borde
 @media (prefers-color-scheme:dark){{body{{background:#1e1e1e;color:#e6e6e6}} nav,th,code,kbd{{background:#2c2c2e}}
   a{{color:#6cb4ff}} h2{{border-color:#444}} td,th{{border-color:#444}}}}
 </style></head><body>
-{body.split("</h1>", 1)[0]}</h1>
+<div style="display:flex;align-items:center;gap:16px">{logo}<div>{body.split("</h1>", 1)[0]}</h1></div></div>
 <nav><b>Contents</b><ul>{toc}</ul></nav>
 {body.split("</h1>", 1)[1]}
 </body></html>

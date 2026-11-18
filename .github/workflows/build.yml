@@ -25,7 +25,7 @@ jobs:
           cache: pip
 
       - name: Install Inno Setup
-        run: choco install innosetup -y --no-progress
+        run: choco install innosetup --version=6.7.1 -y --no-progress
 
       - name: Build app + installer (includes self-test)
         shell: pwsh

@@ -128,6 +128,13 @@ def make_no_activate(tk_win):
 
 def tray_image(state: str):
     from PIL import Image, ImageDraw
+    from config import asset_file
+    path = asset_file(f"tray_{state}.png") or asset_file("tray_busy.png")
+    if path:
+        try:
+            return Image.open(path).convert("RGBA")
+        except Exception:
+            pass
     colors = {"ready": (40, 140, 90), "active": (220, 50, 50), "busy": (150, 150, 150),
               "paused": (230, 160, 30)}
     img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
@@ -166,6 +173,12 @@ class App:
         self.root = tk.Tk()
         self.root.title(APP_NAME)
         T.apply(self.root)                      # dark green theme for every window
+        try:                                    # window/taskbar icon for every window
+            from config import asset_file
+            self._icon_img = tk.PhotoImage(file=asset_file("logo_256.png"))
+            self.root.iconphoto(True, self._icon_img)
+        except Exception:
+            pass
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
         self.root.attributes("-alpha", 0.94)

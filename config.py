@@ -19,6 +19,15 @@ def bundled_model_dir():
     return None
 
 
+def asset_file(name):
+    """A file from assets/ (installed app or source folder), or None."""
+    import sys
+    for base in (getattr(sys, "_MEIPASS", None), os.path.dirname(os.path.abspath(__file__))):
+        if base and os.path.isfile(os.path.join(base, "assets", name)):
+            return os.path.join(base, "assets", name)
+    return None
+
+
 def guide_file():
     """The offline user guide (assets/guide.html), installed app or source folder."""
     import sys
