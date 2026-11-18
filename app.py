@@ -286,8 +286,6 @@ class App:
                 pystray.MenuItem("Start / stop dictation", lambda: self.toggle(), default=True),
                 pystray.MenuItem("Pause / resume", lambda: self.toggle_pause(),
                                  visible=lambda item: self.active),          # only while dictating
-                pystray.MenuItem("Show dictation box", lambda: self.ui_q.put(("restore",)),
-                                 visible=lambda item: self.active),
                 pystray.MenuItem("Settings…", lambda: self.ui_q.put(("settings",))),
                 pystray.MenuItem("Voice profiles…", lambda: self.ui_q.put(("train",))),
                 pystray.MenuItem("How to use…", lambda: self.ui_q.put(("guide",))),
@@ -478,7 +476,7 @@ class App:
         self.root.geometry(f"{w}x{h}+{(sw - w) // 2}+{sh - h - 90}")
 
     def _refresh_tray_menu(self):
-        """Pause / Show dictation box appear in the tray menu only while dictating."""
+        """Pause / resume appears in the tray menu only while dictating."""
         try:
             self.tray.update_menu()
         except Exception:
