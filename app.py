@@ -364,7 +364,7 @@ class App:
         w = self._splash = tk.Toplevel(self.root)
         w.overrideredirect(True)
         w.attributes("-topmost", True)
-        W, H = 460, 420
+        W, H = 460, 395
         w.geometry(f"{W}x{H}+{(w.winfo_screenwidth() - W) // 2}+{(w.winfo_screenheight() - H) // 2}")
         box = tk.Frame(w, bg=T.BG, highlightthickness=1, highlightbackground=T.BORDER)
         box.pack(fill="both", expand=True)
@@ -386,12 +386,14 @@ class App:
                                      wraplength=400, justify="center")
         self._splash_text.pack(pady=(2, 6))
         # how far along it is: a percentage that follows the start-up steps
+        # loading indicator: a moving sound wave (rounded bars) with the percentage beside it
         self._pct, self._pct_span, self._pct_step = 0.0, (0, 18), 1
-        self._splash_pct = tk.Label(box, text="0%", font=("Segoe UI Semibold", 15), fg=T.ACCENT_HI, bg=T.BG)
-        self._splash_pct.pack(pady=(4, 0))
-        # loading indicator: a moving sound wave (rounded bars), not a progress bar
-        self._wave = tk.Canvas(box, width=264, height=44, bg=T.BG, highlightthickness=0)
-        self._wave.pack(pady=(2, 0))
+        row = tk.Frame(box, bg=T.BG); row.pack(pady=(4, 0))
+        self._wave = tk.Canvas(row, width=264, height=44, bg=T.BG, highlightthickness=0)
+        self._wave.pack(side="left")
+        self._splash_pct = tk.Label(row, text="0%", font=("Segoe UI", 10), fg=T.ACCENT_HI, bg=T.BG,
+                                    width=5, anchor="w")
+        self._splash_pct.pack(side="left", padx=(6, 0))
         self._wave_bars = [self._wave.create_line(0, 0, 0, 0, width=6, capstyle="round", fill=T.ACCENT_HI)
                            for _ in range(22)]
         self._wave_t, self._wave_done = 0.0, False
