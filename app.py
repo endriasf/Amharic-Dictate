@@ -14,7 +14,7 @@ import threading
 import time
 import traceback
 
-from config import (APP_NAME, APP_VERSION, app_dir, history_file, load_config, log_error, save_config,
+from config import (APP_NAME, APP_TITLE, APP_VERSION, app_dir, history_file, load_config, log_error, save_config,
                     set_start_with_windows)
 
 RELOAD_KEYS = ("model", "device", "quantize_cpu", "auto_level", "lm_decoding", "lm_weight", "fast_preview", "profile")
@@ -171,7 +171,7 @@ class App:
 
         # ---- overlay
         self.root = tk.Tk()
-        self.root.title(APP_NAME)
+        self.root.title(APP_TITLE)
         T.apply(self.root)                      # dark green theme for every window
         try:                                    # window/taskbar icon for every window
             from config import asset_file
@@ -283,7 +283,7 @@ class App:
         # ---- tray
         import pystray
         self.tray = pystray.Icon(
-            APP_NAME, tray_image("busy"), f"{APP_NAME} (loading…)",
+            APP_NAME, tray_image("busy"), f"{APP_TITLE} (loading…)",
             menu=pystray.Menu(
                 pystray.MenuItem("Start / stop dictation", lambda: self.toggle(), default=True),
                 pystray.MenuItem("Pause / resume", lambda: self.toggle_pause(),
@@ -300,7 +300,7 @@ class App:
                 pystray.MenuItem("Troubleshooting", pystray.Menu(
                     pystray.MenuItem("Open technical log", lambda: self._open_file("error.log")),
                     pystray.MenuItem("Open settings folder", lambda: os.startfile(app_dir())))),
-                pystray.MenuItem(f"Quit {APP_NAME}", lambda: self.quit()),
+                pystray.MenuItem(f"Quit {APP_TITLE}", lambda: self.quit()),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("About…", lambda: self.ui_q.put(("about",))),
             ),
@@ -342,7 +342,8 @@ class App:
             tk.Label(box, text="AmharicDictate", font=("Segoe UI Semibold", 20), fg=T.TEXT, bg=T.BG).pack()
         self._splash_profile = tk.Label(box, text="", font=("Ebrima", 10), fg=T.ACCENT_HI, bg=T.BG)
         self._splash_profile.pack(pady=(8, 0))
-        self._splash_text = tk.Label(box, text="Starting…", font=("Ebrima", 10), fg=T.MUTED, bg=T.BG)
+        self._splash_text = tk.Label(box, text="Starting…", font=("Ebrima", 10), fg=T.MUTED, bg=T.BG,
+                                     wraplength=400, justify="center")
         self._splash_text.pack(pady=(2, 6))
         # loading indicator: a moving sound wave (rounded bars), not a progress bar
         self._wave = tk.Canvas(box, width=264, height=44, bg=T.BG, highlightthickness=0)
@@ -514,7 +515,7 @@ class App:
     def _load_model(self):
         from engine import DictationEngine, Transcriber, ensure_model
         try:
-            self.tray.title = f"{APP_NAME} — loading the AI speech model…"     # no dictation box while loading
+            self.tray.title = f"{APP_TITLE} — loading the AI speech model…"     # no dictation box while loading
             path = ensure_model(self.cfg["model"], lambda s: self.ui_q.put(("loading", s)))
             os.environ["HF_HUB_OFFLINE"] = "1"   # everything is local from here on
             self.ui_q.put(("loading", "Loading the Amharic dictionary…"))
@@ -526,7 +527,7 @@ class App:
             if profile:
                 self.ui_q.put(("profile", f"Voice profile: {profile}" +
                                ("" if adapter else "  (no voice training yet)")))
-            self.ui_q.put(("loading", f"Loading {self.model_name()} and {profile}'s voice profile…" if adapter
+            self.ui_q.put(("loading", f"Loading the AI model and {profile}'s voice profile…" if adapter
                            else f"Loading {self.model_name()}…"))
             self._loaded_adapter = (str(adapter), os.path.getmtime(adapter)) if adapter else None
             transcriber = Transcriber(path, self.cfg["device"], self.cfg["quantize_cpu"],
@@ -553,7 +554,7 @@ class App:
                 self.engine.debug_dir = os.path.join(here, "debug")
             self._register_hotkeys()
             self.tray.icon = tray_image("ready")
-            self.tray.title = f"{APP_NAME} — {self.hotkey_label()}" + (f" — {profile}" if profile else "")
+            self.tray.title = f"{APP_TITLE} — {self.hotkey_label()}" + (f" — {profile}" if profile else "")
             if adapter and transcriber.profile_problem:
                 who = f"Voice profile not used: {transcriber.profile_problem}."
             elif adapter:
@@ -693,7 +694,7 @@ class App:
             name = existing[0]
         else:
             from tkinter import simpledialog
-            name = simpledialog.askstring(APP_NAME, "Who's dictating?\n\nType your name to create your voice profile.",
+            name = simpledialog.askstring(APP_TITLE, "Who's dictating?\n\nType your name to create your voice profile.",
                                           initialvalue=default, parent=self.root) or default
             name = vp.create_profile(name)
         vp.migrate_old_voice_data(name)
@@ -712,8 +713,8 @@ class App:
                             "trained on WAXAL (Google & partners) and FLEURS (Google) Amharic speech data."
                             if model.startswith("Amharic Speech-to-Text EFA") else f"AI speech model: {model}.")
         messagebox.showinfo(
-            f"About {APP_NAME}",
-            f"{APP_NAME} {APP_VERSION}\n"
+            f"About {APP_TITLE}",
+            f"{APP_TITLE} {APP_VERSION}\n"
             "Offline Amharic dictation for Windows, powered by AI speech recognition\nthat runs on this computer.\n\n"
             f"{model_credit}\n\n"
             "Amharic dictionary: Leipzig Corpora Collection (CC BY 4.0).\n"
@@ -774,7 +775,7 @@ class App:
             os.startfile(path)                       # opens in the default browser, offline
         else:
             from tkinter import messagebox
-            messagebox.showinfo(APP_NAME, "The user guide wasn't found. It is also on the project's GitHub page.",
+            messagebox.showinfo(APP_TITLE, "The user guide wasn't found. It is also on the project's GitHub page.",
                                 parent=self.root)
 
     def open_training(self):
@@ -938,7 +939,7 @@ class App:
                 log_error(traceback.format_exc())
                 self.ui_q.put(("show", f"Invalid hotkey: {e}", "Open Settings to fix it."))
                 return
-        self.tray.title = f"{APP_NAME} — {self.hotkey_label()}"
+        self.tray.title = f"{APP_TITLE} — {self.hotkey_label()}"
         self.ui_q.put(("notify", f"Settings saved. Hotkey: {self.hotkey_label()}"))
         self.ui_q.put(("hide_after", 2000))
 
@@ -1237,7 +1238,7 @@ class App:
                     if self._splash is not None:
                         self._splash_message(msg[1])
                     else:
-                        self.tray.title = f"{APP_NAME} — {msg[1]}"
+                        self.tray.title = f"{APP_TITLE} — {msg[1]}"
                 elif kind == "profile":
                     if self._splash is not None:
                         self._splash_profile.config(text=msg[1])
@@ -1248,14 +1249,14 @@ class App:
                         self._close_splash(1800)
                     else:                            # reloaded later (new profile, settings): a notification
                         try:
-                            self.tray.notify(msg[1] + (f"\n{msg[2]}" if msg[2] else ""), APP_NAME)
+                            self.tray.notify(msg[1] + (f"\n{msg[2]}" if msg[2] else ""), APP_TITLE)
                         except Exception:
                             pass
                 elif kind == "splash_close":
                     self._close_splash()
                 elif kind == "notify":               # Windows notification, no dictation box
                     try:
-                        self.tray.notify(msg[1], APP_NAME)
+                        self.tray.notify(msg[1], APP_TITLE)
                     except Exception:
                         pass
                 elif kind == "show":
@@ -1363,7 +1364,7 @@ def selftest(out_path: str) -> int:
     ok = finish_phrase("ሁለት መቶ ሰዎች አራት ነጥብ", {}) == "200 ሰዎች።"
     lines.append(("OK" if ok else "FAIL") + "   text processing"); code |= (not ok)
     with open(out_path, "w", encoding="utf-8") as f:
-        f.write(f"{APP_NAME} {APP_VERSION}\n" + "\n".join(lines) + "\n")
+        f.write(f"{APP_TITLE} {APP_VERSION}\n" + "\n".join(lines) + "\n")
     return code
 
 

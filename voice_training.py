@@ -139,7 +139,7 @@ class VoiceTrainingWindow:
         w = self.win = tk.Toplevel(self.root)
         w.title("Voice profiles")
         bring_to_front(w)
-        w.geometry("780x560")
+        w.geometry("880x580")
         w.protocol("WM_DELETE_WINDOW", self.close)
         family = app.text.cget("font").split(" ")[0].strip("{}") or "Ebrima"
 
