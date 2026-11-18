@@ -339,7 +339,7 @@ class App:
                            for _ in range(22)]
         self._wave_t, self._wave_done = 0.0, False
         self._animate_wave()
-        tk.Label(box, text=f"Version {APP_VERSION}  ·  works offline", font=("Segoe UI", 8),
+        tk.Label(box, text=f"Version {APP_VERSION}  ·  AI speech recognition, fully offline", font=("Segoe UI", 8),
                  fg=T.DIM, bg=T.BG).pack(side="bottom", pady=10)
         w.update_idletasks()
 
@@ -478,7 +478,7 @@ class App:
     def _load_model(self):
         from engine import DictationEngine, Transcriber, ensure_model
         try:
-            self.tray.title = f"{APP_NAME} — loading the speech model…"     # no dictation box while loading
+            self.tray.title = f"{APP_NAME} — loading the AI speech model…"     # no dictation box while loading
             t0 = time.time()
             path = ensure_model(self.cfg["model"], lambda s: self.ui_q.put(("loading", s)))
             os.environ["HF_HUB_OFFLINE"] = "1"   # everything is local from here on
@@ -491,8 +491,8 @@ class App:
             if profile:
                 self.ui_q.put(("profile", f"Voice profile: {profile}" +
                                ("" if adapter else "  (no voice training yet)")))
-            self.ui_q.put(("loading", f"Loading the speech model and {profile}'s voice profile…" if adapter
-                           else "Loading the Amharic speech model…"))
+            self.ui_q.put(("loading", f"Loading the AI speech model and {profile}'s voice profile…" if adapter
+                           else "Loading the Amharic AI speech model…"))
             self._loaded_adapter = (str(adapter), os.path.getmtime(adapter)) if adapter else None
             transcriber = Transcriber(path, self.cfg["device"], self.cfg["quantize_cpu"],
                                       use_lm=self.cfg.get("lm_decoding", True),
@@ -675,16 +675,16 @@ class App:
             model_credit = ("Speech model: Ethio-ASR (Amharic) by badrex, CC BY-NC 4.0 — "
                             "free, non-commercial use only.")
         else:
-            model_credit = (f"Speech model: {model}, CC BY-SA 4.0 — based on facebook/w2v-bert-2.0 (MIT), "
+            model_credit = (f"AI speech model: {model}, CC BY-SA 4.0 — based on facebook/w2v-bert-2.0 (MIT), "
                             "trained on WAXAL (Google & partners) and FLEURS (Google) Amharic speech data.")
         messagebox.showinfo(
             f"About {APP_NAME}",
             f"{APP_NAME} {APP_VERSION}\n"
-            "Offline Amharic dictation for Windows.\n\n"
+            "Offline Amharic dictation for Windows, powered by AI speech recognition.\n\n"
             f"{model_credit}\n\n"
             "Amharic dictionary: Leipzig Corpora Collection (CC BY 4.0).\n"
             "Reading sentences: Leipzig Corpora Collection, Amharic Wikipedia (CC BY 4.0).\n\n"
-            "Everything you dictate stays on this computer.\n\n"
+            "The AI runs on this computer: everything you dictate stays here.\n\n"
             "Created by Endrias F. Abitte",
             parent=self.root)
 

@@ -44,9 +44,9 @@ DisableReadyPage=yes
 
 [Messages]
 WelcomeLabel1=Welcome to Amharic Dictate
-WelcomeLabel2=Free, offline Amharic dictation for Windows.%n%nAmharic Dictate {#AppVersion} needs about {#AppSizeMB} MB of disk space. It installs for your Windows account only and doesn't need administrator rights.%n%nClick Next to continue.
+WelcomeLabel2=Free Amharic dictation for Windows, powered by an AI speech model that runs entirely on your computer — no internet needed.%n%nAmharic Dictate {#AppVersion} needs about {#AppSizeMB} MB of disk space. It installs for your Windows account only and doesn't need administrator rights.%n%nClick Next to continue.
 FinishedHeadingLabel=Amharic Dictate is ready
-FinishedLabel=Setup has finished installing Amharic Dictate.%n%nFind it in the Start menu or on your desktop.
+FinishedLabel=Setup has finished installing Amharic Dictate and its AI speech model.%n%nFind it in the Start menu or on your desktop.
 
 [Files]
 Source: "..\dist\AmharicDictate\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
@@ -171,7 +171,7 @@ end;
 
 procedure InitializeWizard;
 begin
-  CheckPage := CreateCustomPage(wpWelcome, 'System check', 'Checking that this computer can run Amharic Dictate.');
+  CheckPage := CreateCustomPage(wpWelcome, 'System check', 'Checking that this computer can run Amharic Dictate and its AI speech model.');
   RunSystemCheck;
 
   // Installing page: percentage and size copied, then a tip that changes as the install goes on.
@@ -195,7 +195,8 @@ begin
   TipText.Font.Name := 'Ebrima';                 // has Amharic letters and Latin
   TipText.Font.Size := 10;
 
-  SetArrayLength(Tips, 9);
+  SetArrayLength(Tips, 10);
+  Tips[9] := 'Amharic Dictate uses AI speech recognition: a model trained on more than 150 hours of Amharic speech turns your voice into text, right on this computer.';
   Tips[0] := 'Tip:  Press Ctrl + Alt + Space in any program to start dictating. Press it again when you''re done.';
   Tips[1] := 'Tip:  Amharic Dictate runs in the system tray, next to the clock. If you don''t see its round icon, click the ^ arrow — you can drag the icon onto the taskbar to keep it visible.';
   Tips[2] := 'Tip:  Say "አራት ነጥብ" for ።, "ነጠላ ሰረዝ" for ፣ and "የጥያቄ ምልክት" for ?.  Say "አዲስ መስመር" for a new line.';
@@ -203,9 +204,9 @@ begin
   Tips[4] := 'Tip:  Dictating into Microsoft Word? Your words appear in the document as you speak, and fixes in either place stay in step.';
   Tips[5] := 'Tip:  Make it learn your voice: right-click the tray icon, choose Voice profiles, and read a few sentences.';
   Tips[6] := 'Tip:  Add names and special terms to My words so they''re always spelled your way.';
-  Tips[7] := 'Everything runs on this computer. Your voice and your text are never sent anywhere.';
+  Tips[7] := 'The AI speech model runs on this computer. Your voice and your text are never sent anywhere. Like any AI it can mishear words, so check important text.';
   Tips[8] := 'Need help later? Right-click the tray icon and choose How to use… for the full guide.';
-  TipText.Caption := Tips[0];
+  TipText.Caption := Tips[9];
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -228,7 +229,7 @@ begin
   DoneMB := (Int64(CurProgress) * {#AppSizeMB}) div MaxProgress;
   ProgressText.Caption := Format('%d%%     %d MB of %d MB', [Integer(Pct), Integer(DoneMB), {#AppSizeMB}]);
   n := GetArrayLength(Tips);
-  TipText.Caption := Tips[Integer((Pct * n) div 101)];
+  TipText.Caption := Tips[(Integer((Pct * n) div 101) + n - 1) mod n];    // starts with the AI tip
 end;
 
 // On uninstall: remove the "start with Windows" entry, and offer to delete the user's own data

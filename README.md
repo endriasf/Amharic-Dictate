@@ -7,13 +7,14 @@
 
 # Amharic Dictate
 
-**Free, offline Amharic dictation for Windows.** Speak Amharic and your words appear as text in
-Word, Outlook, Teams, your browser or any other program.
+**Free, offline Amharic dictation for Windows, powered by AI.** Speak Amharic and your words appear
+as text in Word, Outlook, Teams, your browser or any other program.
 
 Free and open source.
 
-- **Works offline:** everything runs on your computer. Nothing you say is sent anywhere.
-- **Built-in speech model:** *Amharic Speech-to-Text EFA v1*, included in the installer.
+- **AI speech recognition:** the built-in AI model *Amharic Speech-to-Text EFA v1* turns your
+  speech into Amharic text. It's included in the installer.
+- **Works offline:** the AI runs on your computer. Nothing you say is sent anywhere.
 - **Easy corrections:** click any word to fix, remove or replace it.
 - **Learns your voice:** optional voice profile for better accuracy.
 
@@ -224,7 +225,11 @@ Tray icon → **Settings**:
 
 ## Privacy
 
-Everything you dictate is processed on your computer. Nothing is uploaded. Dictation history is
+Everything you dictate is processed on your computer by the built-in AI model. Nothing is
+uploaded, and no online AI service is used.
+
+Like any AI, the speech model can mishear words, especially names, rare words and noisy audio.
+Check the text before you send or print it. Voice training and **My words** reduce mistakes. Dictation history is
 **off** by default. Voice-profile recordings and corrections stay in your Windows user folder
 (`%APPDATA%\AmharicDictate`) and can be deleted in **Voice profiles**.
 

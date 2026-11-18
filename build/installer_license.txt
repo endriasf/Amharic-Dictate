@@ -4,7 +4,7 @@ Copyright (c) 2026 Endrias F. Abitte
 This installer contains two parts with their own licences:
 
   1. The Amharic Dictate app: MIT License (below).
-  2. The built-in speech model "Amharic Speech-to-Text EFA v1" by Endrias F. Abitte:
+  2. The built-in AI speech-recognition model "Amharic Speech-to-Text EFA v1" by Endrias F. Abitte:
      Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0),
      https://creativecommons.org/licenses/by-sa/4.0/
      It was trained on the WAXAL and FLEURS speech datasets.
@@ -12,7 +12,8 @@ This installer contains two parts with their own licences:
 Other open-source components and their licences are listed in THIRD_PARTY_NOTICES.md,
 installed with the app.
 
-Everything runs on your computer. The app does not send your voice or text anywhere.
+Everything runs on your computer, including the AI model. The app does not send your voice or
+text anywhere. Like any AI, the model can mishear words: check important text before you use it.
 
 ------------------------------------------------------------------------------
 
