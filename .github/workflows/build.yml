@@ -9,6 +9,12 @@ on:
         default: ""
   push:
     tags: ["v*"]              # e.g. git tag v1.0.0 && git push --tags  -> GitHub Release
+  release:
+    types: [published]        # publishing a release on github.com builds and attaches the installer
+
+concurrency:                  # a tag and its release fire together: build once
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
