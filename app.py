@@ -331,6 +331,8 @@ class App:
         if ui_test:                             # self-test: build the windows only (no tray, mic, model)
             return
         self.tray.run_detached()
+        self._splash_message("Checking your voice profile…")
+        self._splash.update()
         try:
             self.ensure_profile()
         except Exception:
@@ -379,7 +381,7 @@ class App:
             tk.Label(box, text="AmharicDictate", font=("Segoe UI Semibold", 20), fg=T.TEXT, bg=T.BG).pack()
         self._splash_profile = tk.Label(box, text="", font=("Ebrima", 10), fg=T.ACCENT_HI, bg=T.BG)
         self._splash_profile.pack(pady=(8, 0))
-        self._splash_text = tk.Label(box, text="Starting…", font=("Ebrima", 10), fg=T.MUTED, bg=T.BG,
+        self._splash_text = tk.Label(box, text="Opening Amharic Dictate…", font=("Ebrima", 10), fg=T.MUTED, bg=T.BG,
                                      wraplength=400, justify="center")
         self._splash_text.pack(pady=(2, 6))
         # loading indicator: a moving sound wave (rounded bars), not a progress bar
@@ -549,13 +551,18 @@ class App:
         self.tray.icon = tray_image("busy")
         threading.Thread(target=self._load_model, daemon=True).start()
 
+    def _step(self, n, text):
+        """Start-up progress: 'Step 2 of 5 — Loading the Amharic dictionary…' (tray tooltip after start-up)."""
+        self.ui_q.put(("loading", f"Step {n} of 5 — {text}"))
+
     def _load_model(self):
+        self._step(1, "Starting the AI engine…")
         from engine import DictationEngine, Transcriber, ensure_model
         try:
             self.tray.title = f"{APP_TITLE} — loading the AI speech model…"     # no dictation box while loading
             path = ensure_model(self.cfg["model"], lambda s: self.ui_q.put(("loading", s)))
             os.environ["HF_HUB_OFFLINE"] = "1"   # everything is local from here on
-            self.ui_q.put(("loading", "Loading the Amharic dictionary…"))
+            self._step(2, "Loading the Amharic dictionary…")
             from textproc import lexicon
             lexicon()                                    # load the Amharic dictionary once
             level = self.cfg.get("auto_level", True)
@@ -564,8 +571,8 @@ class App:
             if profile:
                 self.ui_q.put(("profile", f"Voice profile: {profile}" +
                                ("" if adapter else "  (no voice training yet)")))
-            self.ui_q.put(("loading", f"Loading the AI model and {profile}'s voice profile…" if adapter
-                           else f"Loading {self.model_name()}…"))
+            self._step(3, f"Loading the AI model and {profile}'s voice profile… (the longest step)" if adapter
+                       else "Loading the AI speech model… (the longest step)")
             self._loaded_adapter = (str(adapter), os.path.getmtime(adapter)) if adapter else None
             transcriber = Transcriber(path, self.cfg["device"], self.cfg["quantize_cpu"],
                                       use_lm=self.cfg.get("lm_decoding", True),
@@ -578,7 +585,7 @@ class App:
                                 else "  ✓ loaded")))
             preview = None
             if transcriber.device == "cpu" and not self.cfg["quantize_cpu"] and self.cfg.get("fast_preview", True):
-                self.ui_q.put(("loading", "Preparing fast live preview…"))
+                self._step(4, "Preparing the live preview…")
                 preview = Transcriber(path, "cpu", True, auto_level=level,     # int8 copy: quick preview
                                       adapter=adapter if not transcriber.profile_problem else None)
             self.engine = DictationEngine(transcriber, self.cfg, self._on_partial, self._on_phrase, preview)
@@ -589,6 +596,7 @@ class App:
                 self.engine.decode_log = os.path.join(here, "decode_log.txt")
             if os.path.exists(os.path.join(here, "debug_audio.flag")):   # opt-in diagnostics
                 self.engine.debug_dir = os.path.join(here, "debug")
+            self._step(5, f"Turning on the {self.hotkey_label()} shortcut…")
             self._register_hotkeys()
             self.tray.icon = tray_image("ready")
             self.tray.title = f"{APP_TITLE} — {self.hotkey_label()}" + (f" — {profile}" if profile else "")
@@ -742,6 +750,9 @@ class App:
             # start-up window stays on top, so ask over the start-up window and let it step back.
             from tkinter import simpledialog
             parent = self._splash if getattr(self, "_splash", None) is not None else self.root
+            if getattr(self, "_splash", None) is not None:
+                self._splash_message("First time on this computer: type your name in the box to create your "
+                                     "voice profile.")
             try:
                 parent.attributes("-topmost", False)
             except Exception:
