@@ -7,7 +7,8 @@ import markdown
 here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 readme = open(os.path.join(here, "README.md"), encoding="utf-8").read()
 user = readme[: readme.index("## Licence and credits")]
-user = re.sub(r"^<img [^>]*>\s*", "", user, flags=re.M)                  # the logo is added below          # stop before developer-facing parts
+user = re.sub(r'<p align="center">.*?</p>\s*', "", user, flags=re.S)       # README banner: the logo is added below
+user = re.sub(r"^<img [^>]*>\s*", "", user, flags=re.M)          # stop before developer-facing parts
 user = re.sub(r"\n## 1\. Install.*?(?=\n## 2\.)", "\n", user, flags=re.S)  # already installed
 user = re.sub(r"^(#{2,3}) \d+[a-e]?\. ", r"\1 ", user, flags=re.M)          # no section numbers
 user = user.replace("# Amharic Dictate", "# Amharic Dictate — how to use", 1)

@@ -1,4 +1,9 @@
-<img src="assets/logo_256.png" width="96" alt="Amharic Dictate logo">
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/banner_dark.png">
+    <img src="assets/banner_light.png" width="520" alt="Amharic Dictate">
+  </picture>
+</p>
 
 # Amharic Dictate
 
