@@ -6,12 +6,14 @@ on:
     - cron: "17 6 * * 1"     # every Monday
   push:
     paths: ["requirements.txt", ".github/workflows/security.yml"]
+  pull_request:                # every proposed change is checked before it can be merged
 
 permissions:
   contents: read
 
 jobs:
   audit:
+    name: Security audit       # the required check in the "protect main" rule
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
