@@ -65,3 +65,31 @@ if (Test-Path $iscc) {
 } else {
   Write-Host "Inno Setup not found; skipping installer. App folder: dist\AmharicDictate"
 }
+
+# ---- Microsoft Store package (MSIX). Built only when the Store identity is set (Actions variables
+# STORE_IDENTITY_NAME, STORE_PUBLISHER, STORE_PUBLISHER_NAME from Partner Center -> Product identity).
+# Left unsigned on purpose: the Store signs it after certification.
+if ($env:STORE_IDENTITY_NAME -and $env:STORE_PUBLISHER -and $env:STORE_PUBLISHER_NAME) {
+  $pkg = "build\msix\pkg"
+  if (Test-Path $pkg) { Remove-Item $pkg -Recurse -Force }
+  New-Item -ItemType Directory -Force $pkg | Out-Null
+  Copy-Item dist\AmharicDictate\* $pkg -Recurse
+  Copy-Item build\msix\Assets $pkg -Recurse
+  Copy-Item assets\guide.html "$pkg\Amharic Dictate guide.html"
+  Copy-Item build\installer_license.txt "$pkg\LICENCES.txt"
+  $manifest = (Get-Content build\msix\AppxManifest.xml -Raw -Encoding UTF8).
+    Replace("{{IDENTITY_NAME}}", $env:STORE_IDENTITY_NAME).
+    Replace("{{PUBLISHER}}", [System.Security.SecurityElement]::Escape($env:STORE_PUBLISHER)).
+    Replace("{{PUBLISHER_NAME}}", [System.Security.SecurityElement]::Escape($env:STORE_PUBLISHER_NAME)).
+    Replace("{{VERSION}}", "$version.0")
+  Set-Content "$pkg\AppxManifest.xml" $manifest -Encoding UTF8
+  $makeappx = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\makeappx.exe" |
+              Sort-Object FullName -Descending | Select-Object -First 1
+  if (-not $makeappx) { throw "makeappx.exe (Windows SDK) not found" }
+  New-Item -ItemType Directory -Force build\Output | Out-Null
+  & $makeappx.FullName pack /o /d $pkg /p "build\Output\AmharicDictate-$version.msix"
+  if ($LASTEXITCODE -ne 0) { throw "MSIX packaging failed" }
+  Write-Host "Store package: build\Output\AmharicDictate-$version.msix"
+} else {
+  Write-Host "Store identity not set; skipping the Microsoft Store package."
+}

@@ -278,6 +278,8 @@ class App:
         self._build_mini(bg)
 
         self._update = None                     # (version, page) when a newer release exists
+        from config import is_store_app
+        self._store_app = is_store_app()
         # ---- tray
         import pystray
         self.tray = pystray.Icon(
@@ -291,7 +293,8 @@ class App:
                 pystray.MenuItem("How to use…", lambda: self.ui_q.put(("guide",))),
                 pystray.MenuItem(lambda item: f"Download update {self._update[0]}…" if self._update else "",
                                  lambda: self._open_update(), visible=lambda item: bool(self._update)),
-                pystray.MenuItem("Check for updates", lambda: self._check_updates(manual=True)),
+                pystray.MenuItem("Check for updates", lambda: self._check_updates(manual=True),
+                                 visible=lambda item: not self._store_app),      # the Store updates the Store version
                 pystray.MenuItem("Open history", lambda: self._open_history(),
                                  visible=lambda item: bool(self.cfg.get("save_history"))),
                 pystray.MenuItem("Troubleshooting", pystray.Menu(
@@ -721,6 +724,8 @@ class App:
 
     # ---------- updates (see updater.py: version number only, never automatic installs)
     def _check_updates(self, manual=False):
+        if self._store_app:                      # Microsoft Store installs updates itself
+            return
         if not manual and not self.cfg.get("check_updates", True):
             return
         if not manual and time.time() - float(self.cfg.get("last_update_check", 0)) < 20 * 3600:
