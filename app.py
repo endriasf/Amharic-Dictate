@@ -14,7 +14,7 @@ import threading
 import time
 import traceback
 
-from config import (APP_NAME, APP_VERSION, app_dir, load_config, log_error, save_config,
+from config import (APP_NAME, APP_VERSION, app_dir, history_file, load_config, log_error, save_config,
                     set_start_with_windows)
 
 RELOAD_KEYS = ("model", "device", "quantize_cpu", "auto_level", "lm_decoding", "lm_weight", "fast_preview", "profile")
@@ -293,7 +293,7 @@ class App:
                 pystray.MenuItem(lambda item: f"Download update {self._update[0]}…" if self._update else "",
                                  lambda: self._open_update(), visible=lambda item: bool(self._update)),
                 pystray.MenuItem("Check for updates", lambda: self._check_updates(manual=True)),
-                pystray.MenuItem("Open history", lambda: self._open_file("history.txt"),
+                pystray.MenuItem("Open history", lambda: self._open_history(),
                                  visible=lambda item: bool(self.cfg.get("save_history"))),
                 pystray.MenuItem("Troubleshooting", pystray.Menu(
                     pystray.MenuItem("Open technical log", lambda: self._open_file("error.log")),
@@ -473,6 +473,14 @@ class App:
         w, h = 860, 280
         sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
         self.root.geometry(f"{w}x{h}+{(sw - w) // 2}+{sh - h - 90}")
+
+    def _open_history(self):
+        from config import history_file
+        p = history_file(self.cfg)
+        if p.exists():
+            os.startfile(p)
+        else:
+            self.ui_q.put(("notify", f"Nothing saved yet. The history will be saved to {p}"))
 
     def _open_file(self, name):
         p = app_dir() / name
@@ -1027,7 +1035,7 @@ class App:
     def _deliver(self, text: str, in_document: bool = False):
         if in_document:                       # live in Word: the text is already there
             if self.cfg["save_history"] and text:
-                with open(app_dir() / "history.txt", "a", encoding="utf-8") as f:
+                with open(history_file(self.cfg), "a", encoding="utf-8") as f:
                     f.write(time.strftime("[%Y-%m-%d %H:%M] ") + text.replace("\n", " ⏎ ") + "\n")
             self.ui_q.put(("status", "Done — your text is in Word"))
             self.ui_q.put(("hide_after", 900))
@@ -1037,7 +1045,7 @@ class App:
             self.ui_q.put(("hide_after", 2500))
             return
         if self.cfg["save_history"]:
-            with open(app_dir() / "history.txt", "a", encoding="utf-8") as f:
+            with open(history_file(self.cfg), "a", encoding="utf-8") as f:
                 f.write(time.strftime("[%Y-%m-%d %H:%M] ") + text.replace("\n", " ⏎ ") + "\n")
         mode = self.cfg["insert"]
         if mode == "on_stop":

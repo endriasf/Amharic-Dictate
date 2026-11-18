@@ -1,6 +1,7 @@
 """Settings window (tkinter)."""
 
 import theme as T
+import os
 import tkinter as tk
 from tkinter import ttk
 
@@ -58,7 +59,30 @@ def open_settings(root, cfg: dict, on_save):
     check(g, 7, "start_with_windows", "Start automatically when I sign in to Windows")
     check(g, 11, "check_updates", "Check for new versions once a day (asks GitHub for the latest version "
                                   "number only — nothing about you or your dictation is sent)")
-    check(g, 8, "save_history", "Save a history of transcripts (stored unencrypted on this PC)")
+    hist = ttk.Frame(g); hist.grid(row=8, column=0, columnspan=2, sticky="we", **pad)
+    hvar = tk.BooleanVar(value=bool(cfg["save_history"])); v["save_history"] = (hvar, None)
+    ttk.Checkbutton(hist, text="Save a history of everything I dictate (a text file, not encrypted)",
+                    variable=hvar).grid(row=0, column=0, columnspan=3, sticky="w")
+    from config import history_file
+    dvar = tk.StringVar(value=str(cfg.get("history_dir", ""))); v["history_dir"] = (dvar, None)
+    where = ttk.Label(hist, text="", foreground=T.MUTED)
+    where.grid(row=1, column=0, sticky="w", padx=(24, 8))
+
+    def show_where(*_):
+        where.config(text=f"Saved to: {history_file({'history_dir': dvar.get()})}")
+
+    def choose_folder():
+        from tkinter import filedialog
+        d = filedialog.askdirectory(parent=win, title="Choose where to save the dictation history",
+                                    initialdir=str(history_file({'history_dir': dvar.get()}).parent))
+        if d:
+            dvar.set(os.path.normpath(d)); show_where()
+
+    def open_folder():
+        os.startfile(str(history_file({'history_dir': dvar.get()}).parent))
+    ttk.Button(hist, text="Change folder…", command=choose_folder).grid(row=1, column=1, padx=2)
+    ttk.Button(hist, text="Open folder", command=open_folder).grid(row=1, column=2, padx=2)
+    show_where()
     check(g, 10, "live_word", "Live dictation into Microsoft Word: text appears as you speak, corrections update "
                               "the document, and edits you make in Word update the box")
 
