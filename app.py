@@ -1316,7 +1316,8 @@ def selftest(out_path: str) -> int:
     lines, code = [], 0
     for mod in ("numpy", "torch", "sounddevice", "keyboard", "pyperclip", "pystray", "PIL",
                 "huggingface_hub", "engine", "textproc", "settings_ui", "lmdecode", "voiceprofile",
-                "voice_training", "train_local", "learning", "wordsync", "theme", "win32com.client", "pythoncom"):
+                "voice_training", "train_local", "learning", "wordsync", "theme", "cmdspot", "updater",
+                "win32com.client", "pythoncom"):
         try:
             __import__(mod)
             lines.append(f"OK   {mod}")
