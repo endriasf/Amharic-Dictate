@@ -92,17 +92,19 @@ def lockups():
         body = f'<g transform="translate(10 10)">{m}</g>{name_text(236, 134, 74, on_dark)}'
         render(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}">{body}</svg>', W, H,
                os.path.join(A, f"banner_{suffix}.png"))
+    # the mark alone (transparent), for the app's start-up window
+    render(svg(mark()), 128, 128, os.path.join(A, "mark_128.png"))
     # name only, for the app's start-up window (dark)
     render(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 56">{name_text(180, 42, 40, True, "middle")}</svg>',
            360, 56, os.path.join(A, "wordmark_dark.png"))
     # link preview for GitHub (1280 x 640)
     m = mark()
-    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640"><rect width="1280" height="640" fill="{DARK}"/>'
+    page = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640"><rect width="1280" height="640" fill="{DARK}"/>'
            f'<g opacity=".12" transform="translate(-180 260) scale(3.2)">{m}</g>'
            f'<g transform="translate(120 170) scale(1.5)">{m}</g>{name_text(460, 345, 92, True)}'
            f'<text x="464" y="410" font-family="Poppins" font-size="30" fill="#CFE8DB">AI-powered Amharic dictation for Windows</text>'
            f'<text x="464" y="455" font-family="Poppins" font-size="24" fill="#8FB8A3">Free · runs fully offline</text></svg>')
-    render(svg, 1280, 640, os.path.join(A, "social_preview.png"))
+    render(page, 1280, 640, os.path.join(A, "social_preview.png"))
 
 
 def main():

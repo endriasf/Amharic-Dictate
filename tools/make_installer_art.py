@@ -2,7 +2,7 @@
 faint mesob ring from the logo. Needs rsvg-convert; outputs are committed."""
 import os, subprocess, sys, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from make_logo import mark, DARK
+from make_logo import mark, name_text, DARK
 
 here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 out = os.path.join(here, "build", "art")
@@ -21,11 +21,11 @@ for pct, s in ((100, 1.0), (150, 1.5), (200, 2.0)):
     os.unlink(f.name)
 print("installer art written")
 
-# Welcome / Finished pages: the logo in the left column (transparent, so the background shows)
+# Welcome / Finished pages: the logo and AmharicDictate name in the left column (transparent background)
 for pct, s in ((100, 1.0), (150, 1.5), (200, 2.0)):
     w, h = int(164 * s), int(314 * s)
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 164 314">'
-           f'<g transform="translate(12 30) scale(.7)">{mark()}</g></svg>')
+           f'<g transform="translate(17 26) scale(.65)">{mark()}</g>{name_text(82, 190, 17.5, True, "middle")}</svg>')
     with tempfile.NamedTemporaryFile("w", suffix=".svg", delete=False) as f:
         f.write(svg)
     subprocess.run(["rsvg-convert", "-w", str(w), "-h", str(h), f.name, "-o",

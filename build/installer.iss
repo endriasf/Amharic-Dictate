@@ -43,9 +43,9 @@ DisableProgramGroupPage=yes
 DisableReadyPage=yes
 
 [Messages]
-WelcomeLabel1=Welcome to Amharic Dictate
+WelcomeLabel1=Welcome
 WelcomeLabel2=Free Amharic dictation for Windows, powered by Amharic Speech-to-Text EFA v1 — an AI speech model that runs entirely on your computer, with no internet needed.%n%nAmharic Dictate {#AppVersion} needs about {#AppSizeMB} MB of disk space. It installs for your Windows account only and doesn't need administrator rights.%n%nClick Next to continue.
-FinishedHeadingLabel=Amharic Dictate is ready
+FinishedHeadingLabel=Ready to dictate
 FinishedLabel=Setup has finished installing Amharic Dictate and Amharic Speech-to-Text EFA v1.%n%nFind it in the Start menu or on your desktop.
 
 [Files]

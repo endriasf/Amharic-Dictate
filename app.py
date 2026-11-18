@@ -324,12 +324,12 @@ class App:
         w = self._splash = tk.Toplevel(self.root)
         w.overrideredirect(True)
         w.attributes("-topmost", True)
-        W, H = 460, 320
+        W, H = 460, 390
         w.geometry(f"{W}x{H}+{(w.winfo_screenwidth() - W) // 2}+{(w.winfo_screenheight() - H) // 2}")
         box = tk.Frame(w, bg=T.BG, highlightthickness=1, highlightbackground=T.BORDER)
         box.pack(fill="both", expand=True)
         try:
-            self._splash_logo = tk.PhotoImage(file=asset_file("logo_256.png")).subsample(2)
+            self._splash_logo = tk.PhotoImage(file=asset_file("mark_128.png"))   # same mark as everywhere
             tk.Label(box, image=self._splash_logo, bg=T.BG).pack(pady=(26, 8))
         except Exception:
             pass
