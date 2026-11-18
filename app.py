@@ -1389,7 +1389,16 @@ def main():
         train_local.run_and_exit(sys.argv[2:])
     if len(sys.argv) >= 3 and sys.argv[1] == "--selftest":
         sys.exit(selftest(sys.argv[2]))
-    if not single_instance():
+    if not single_instance():                  # already running: say so instead of doing nothing
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(
+                None, "Amharic Dictate is already running.\n\nLook for its round icon in the system tray, "
+                "next to the clock (click ^ if you don't see it).\n\nIf it doesn't respond, open Task Manager, "
+                "go to the Details tab, end every AmharicDictate.exe, then start it again.",
+                APP_TITLE, 0x40 | 0x40000)            # information icon, always on top
+        except Exception:
+            pass
         return
     # Running under pythonw has no console: send output to run.log next to the app
     if sys.stdout is None or sys.stderr is None or not sys.stdout.isatty():
