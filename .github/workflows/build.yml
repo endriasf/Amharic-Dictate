@@ -31,6 +31,9 @@ jobs:
         shell: pwsh
         env:
           MODEL_SOURCE: ${{ inputs.model_source || vars.MODEL_SOURCE }}
+          STORE_IDENTITY_NAME: ${{ vars.STORE_IDENTITY_NAME }}
+          STORE_PUBLISHER: ${{ vars.STORE_PUBLISHER }}
+          STORE_PUBLISHER_NAME: ${{ vars.STORE_PUBLISHER_NAME }}
         run: ./build/build.ps1
 
       - name: Security check of bundled libraries (known vulnerabilities)
@@ -58,6 +61,13 @@ jobs:
             build/Output/*.exe
             build/Output/SHA256SUMS.txt
             build/Output/security-audit.txt
+
+      - name: Upload Microsoft Store package
+        if: hashFiles('build/Output/*.msix') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: AmharicDictate-Store-package
+          path: build/Output/*.msix
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')

@@ -56,9 +56,16 @@ def open_settings(root, cfg: dict, on_save):
     labeled(g, 9, "Undo hotkey", entry(g, "undo_hotkey"))
     labeled(g, 5, "Output", combo(g, "insert", INSERT_MODES))
     check(g, 6, "beep", "Play a short beep on start/stop")
-    check(g, 7, "start_with_windows", "Start automatically when I sign in to Windows")
-    check(g, 11, "check_updates", "Check for new versions once a day (asks GitHub for the latest version "
-                                  "number only — nothing about you or your dictation is sent)")
+    from config import is_store_app
+    if is_store_app():                 # Store version: Windows controls this
+        ttk.Label(g, text="To start automatically when you sign in, turn on Amharic Dictate in "
+                          "Windows Settings → Apps → Startup.", foreground=T.MUTED, wraplength=520
+                  ).grid(row=7, column=0, columnspan=2, sticky="w", **pad)
+    else:
+        check(g, 7, "start_with_windows", "Start automatically when I sign in to Windows")
+    if not is_store_app():             # Store version: the Store updates the app
+        check(g, 11, "check_updates", "Check for new versions once a day (asks GitHub for the latest version "
+                                      "number only — nothing about you or your dictation is sent)")
     hist = ttk.Frame(g); hist.grid(row=8, column=0, columnspan=2, sticky="we", **pad)
     hvar = tk.BooleanVar(value=bool(cfg["save_history"])); v["save_history"] = (hvar, None)
     ttk.Checkbutton(hist, text="Save a history of everything I dictate (a text file, not encrypted)",

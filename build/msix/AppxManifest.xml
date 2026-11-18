@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Microsoft Store package for Amharic Dictate. The three {{...}} values come from Partner Center
+     (Product management -> Product identity) and are filled in by build.ps1 from the repository's
+     Actions variables STORE_IDENTITY_NAME, STORE_PUBLISHER and STORE_PUBLISHER_NAME. -->
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+         xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+         xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+         xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+         IgnorableNamespaces="uap desktop rescap">
+  <Identity Name="{{IDENTITY_NAME}}" Publisher="{{PUBLISHER}}" Version="{{VERSION}}" ProcessorArchitecture="x64"/>
+  <Properties>
+    <DisplayName>Amharic Dictate</DisplayName>
+    <PublisherDisplayName>{{PUBLISHER_NAME}}</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <Description>Free, offline Amharic dictation for Windows, powered by the Amharic Speech-to-Text EFA v1 AI speech model.</Description>
+  </Properties>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0"/>
+  </Dependencies>
+  <Resources>
+    <Resource Language="en-us"/>
+  </Resources>
+  <Applications>
+    <Application Id="AmharicDictate" Executable="AmharicDictate.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements DisplayName="Amharic Dictate" Description="Offline Amharic dictation"
+                          BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png"
+                          Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"/>
+      </uap:VisualElements>
+      <Extensions>
+        <!-- "Start when I sign in": off until the person turns it on in Settings -> Apps -> Startup -->
+        <desktop:Extension Category="windows.startupTask" Executable="AmharicDictate.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="AmharicDictateStartup" Enabled="false" DisplayName="Amharic Dictate"/>
+        </desktop:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust"/>
+    <DeviceCapability Name="microphone"/>
+  </Capabilities>
+</Package>

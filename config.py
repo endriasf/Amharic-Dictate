@@ -141,8 +141,22 @@ def log_error(msg: str):
         f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + msg + "\n")
 
 
+def is_store_app() -> bool:
+    """True when running as the Microsoft Store (MSIX) version: the Store handles updates and start-up."""
+    try:
+        import ctypes
+        n = ctypes.c_uint32(0)
+        # APPMODEL_ERROR_NO_PACKAGE (15700) means a normal, non-Store install
+        return ctypes.windll.kernel32.GetCurrentPackageFullName(ctypes.byref(n), None) != 15700
+    except Exception:
+        return False
+
+
 def set_start_with_windows(enabled: bool):
-    """Add/remove HKCU Run entry (per-user, no admin needed)."""
+    """Add/remove HKCU Run entry (per-user, no admin needed). The Store version uses Windows' own
+    start-up setting instead (Settings → Apps → Startup)."""
+    if is_store_app():
+        return
     try:
         import winreg
     except ImportError:
