@@ -478,7 +478,7 @@ class DictationEngine:
         return text
 
     def _save_short(self, audio):
-        """Diagnostics (only while decode_log.flag exists): keep the last 100 short phrases."""
+        """Diagnostics (only while decode_audio.flag exists): keep the last 100 short phrases."""
         import os, wave, glob
         d = os.path.join(os.path.dirname(self.decode_log), "decode_audio")
         os.makedirs(d, exist_ok=True)
@@ -616,7 +616,8 @@ class DictationEngine:
                                         f"  final   : {text}\n")
                         except Exception:
                             pass
-                        if len(job[1]) <= SR * 4:              # short phrases: keep the sound to tune command spotting
+                        if len(job[1]) <= SR * 4 and os.path.exists(os.path.join(   # separate opt-in for audio
+                                os.path.dirname(self.decode_log), "decode_audio.flag")):
                             try:
                                 self._save_short(job[1])
                             except Exception:

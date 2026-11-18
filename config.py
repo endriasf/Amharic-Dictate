@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 APP_NAME = "AmharicDictate"
-APP_VERSION = "2.3.0"
+APP_VERSION = "2.4.0"
 
 BUNDLED_MODEL = "bundled"     # the speech model packaged inside the installer
 

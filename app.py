@@ -150,7 +150,7 @@ def tray_image(state: str):
 # App
 # --------------------------------------------------------------------------
 class App:
-    def __init__(self):
+    def __init__(self, ui_test=False):
         import tkinter as tk
 
         self.cfg = load_config()
@@ -293,18 +293,22 @@ class App:
                 pystray.MenuItem(lambda item: f"Download update {self._update[0]}…" if self._update else "",
                                  lambda: self._open_update(), visible=lambda item: bool(self._update)),
                 pystray.MenuItem("Check for updates", lambda: self._check_updates(manual=True)),
-                pystray.MenuItem("Open history", lambda: self._open_file("history.txt")),
-                pystray.MenuItem("Open log", lambda: self._open_file("error.log")),
+                pystray.MenuItem("Open history", lambda: self._open_file("history.txt"),
+                                 visible=lambda item: bool(self.cfg.get("save_history"))),
+                pystray.MenuItem("Troubleshooting", pystray.Menu(
+                    pystray.MenuItem("Open technical log", lambda: self._open_file("error.log")),
+                    pystray.MenuItem("Open settings folder", lambda: os.startfile(app_dir())))),
                 pystray.MenuItem(f"Quit {APP_NAME}", lambda: self.quit()),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("About…", lambda: self.ui_q.put(("about",))),
             ),
         )
-        self.tray.run_detached()
-
         self.root.withdraw()                    # the dictation box appears only when dictating
         self._splash = None
         self._show_splash()
+        if ui_test:                             # self-test: build the windows only (no tray, mic, model)
+            return
+        self.tray.run_detached()
         try:
             self.ensure_profile()
         except Exception:
@@ -316,7 +320,6 @@ class App:
     # ---------- start-up window (centred, like other apps; closes when the model is ready)
     def _show_splash(self):
         import tkinter as tk
-        from tkinter import ttk
         from config import asset_file
         w = self._splash = tk.Toplevel(self.root)
         w.overrideredirect(True)
@@ -475,6 +478,8 @@ class App:
         p = app_dir() / name
         if p.exists():
             os.startfile(p)
+        else:
+            self.ui_q.put(("notify", "Nothing saved yet." if name == "history.txt" else "The log is empty — no errors so far."))
 
     def hotkey_label(self):
         return self.cfg["hotkey"] if self.cfg["mode"] == "toggle" else f"hold {self.cfg['hold_key']}"
@@ -491,7 +496,6 @@ class App:
         from engine import DictationEngine, Transcriber, ensure_model
         try:
             self.tray.title = f"{APP_NAME} — loading the AI speech model…"     # no dictation box while loading
-            t0 = time.time()
             path = ensure_model(self.cfg["model"], lambda s: self.ui_q.put(("loading", s)))
             os.environ["HF_HUB_OFFLINE"] = "1"   # everything is local from here on
             self.ui_q.put(("loading", "Loading the Amharic dictionary…"))
@@ -895,6 +899,7 @@ class App:
 
     def apply_settings(self, new: dict):
         old = self.cfg
+        self.root.after(100, lambda: self.tray.update_menu())        # e.g. show/hide Open history
         save_config(new)
         self.cfg = new
         try:
@@ -984,7 +989,7 @@ class App:
                 self.mic_release("dictation")
             except Exception:
                 pass
-            self.ui_q.put(("show", f"Error: {e}", "Details are in the log (tray → Open log)."))
+            self.ui_q.put(("show", f"Error: {e}", "Details are in the log (tray → Troubleshooting → Open technical log)."))
         finally:
             self._toggle_lock.release()
 
@@ -1318,6 +1323,18 @@ def selftest(out_path: str) -> int:
             lines.append(f"FAIL built-in model: {e}"); code = 1
     else:
         lines.append("--   no built-in model in this build")
+    # windows: the app must be able to build every window (catches start-up crashes like a missing import)
+    try:
+        app = App(ui_test=True)
+        app.root.update()
+        app.open_settings(); app.root.update()
+        app.open_training(); app.root.update()
+        app._wave_done = True; app.root.update()
+        app._close_splash(); app.root.update()
+        app.root.destroy()
+        lines.append("OK   app windows (start-up, dictation box, settings, voice profiles)")
+    except Exception:
+        lines.append("FAIL app windows: " + traceback.format_exc().replace("\n", " | ")); code = 1
     from textproc import finish_phrase
     ok = finish_phrase("ሁለት መቶ ሰዎች አራት ነጥብ", {}) == "200 ሰዎች።"
     lines.append(("OK" if ok else "FAIL") + "   text processing"); code |= (not ok)

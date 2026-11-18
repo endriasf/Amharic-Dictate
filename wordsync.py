@@ -14,7 +14,6 @@ background thread, as COM requires.
 import os
 import queue
 import threading
-import time
 
 WORD_WINDOW_CLASS = "OpusApp"          # Word's main window
 # Windows' own taskbar, tray, hidden-icons flyout, menus and desktop: never the program you're working in

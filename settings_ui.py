@@ -4,7 +4,7 @@ import theme as T
 import tkinter as tk
 from tkinter import ttk
 
-from config import APP_NAME, APP_VERSION, BUNDLED_MODEL, MODEL_PRESETS, bring_to_front, bundled_model_dir
+from config import APP_NAME, APP_VERSION, MODEL_PRESETS, bring_to_front, bundled_model_dir
 from textproc import COMMANDS
 
 INSERT_MODES = [("on_stop", "Paste when I stop"), ("per_phrase", "Type as I speak (each phrase)"),

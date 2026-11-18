@@ -10,8 +10,6 @@ import json
 import os
 import subprocess
 import sys
-import threading
-import time
 import tkinter as tk
 import wave
 from tkinter import filedialog, messagebox, simpledialog, ttk
@@ -19,7 +17,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 import numpy as np
 
 import voiceprofile as vp
-from config import bring_to_front, log_error
+from config import bring_to_front
 
 SR = 16000
 SETUP_CLIPS = 50          # Dragon-style setup reading
