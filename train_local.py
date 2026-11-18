@@ -345,7 +345,15 @@ def main(argv=None):
         return 0
     except Exception as e:
         import traceback
-        prog.update(1.0, f"Training failed: {e}", done=True, ok=False, error=traceback.format_exc())
+        try:
+            from diagnose import explain
+            what, todo = explain(e, "training")
+            if what == "Something went wrong":
+                todo = "Try Start training again. Your recordings are safe."
+            msg = f"Training stopped: {what.lower()}. {todo}"
+        except Exception:
+            msg = "Training stopped. Try Start training again — your recordings are safe."
+        prog.update(1.0, msg, done=True, ok=False, error=traceback.format_exc())
         return 1
 
 

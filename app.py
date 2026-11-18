@@ -604,7 +604,9 @@ class App:
         except Exception as e:
             log_error(traceback.format_exc())
             self.ui_q.put(("splash_close",))
-            self.ui_q.put(("show", f"Could not load the model: {e}", "Open Settings from the tray icon to pick another model."))
+            from diagnose import explain
+            what, todo = explain(e, "loading")
+            self.ui_q.put(("show", what, todo))
         finally:
             self.loading = False
 
@@ -992,7 +994,9 @@ class App:
                 self._register_hotkeys()
             except Exception as e:
                 log_error(traceback.format_exc())
-                self.ui_q.put(("show", f"Invalid hotkey: {e}", "Open Settings to fix it."))
+                from diagnose import explain
+                what, todo = explain(e, "hotkey")
+                self.ui_q.put(("show", what, todo))
                 return
         self.tray.title = f"{APP_TITLE} — {self.hotkey_label()}"
         self.ui_q.put(("notify", f"Settings saved. Hotkey: {self.hotkey_label()}"))
@@ -1073,7 +1077,9 @@ class App:
                 self.mic_release("dictation")
             except Exception:
                 pass
-            self.ui_q.put(("show", f"Error: {e}", "Details are in the log (tray → Troubleshooting → Open technical log)."))
+            from diagnose import explain
+            what, todo = explain(e, "dictating")
+            self.ui_q.put(("show", what, todo))
         finally:
             self._toggle_lock.release()
 
@@ -1382,7 +1388,7 @@ def selftest(out_path: str) -> int:
     lines, code = [], 0
     for mod in ("numpy", "torch", "sounddevice", "keyboard", "pyperclip", "pystray", "PIL",
                 "huggingface_hub", "engine", "textproc", "settings_ui", "lmdecode", "voiceprofile",
-                "voice_training", "train_local", "learning", "wordsync", "theme", "cmdspot", "updater",
+                "voice_training", "train_local", "learning", "wordsync", "theme", "cmdspot", "updater", "diagnose",
                 "win32com.client", "pythoncom"):
         try:
             __import__(mod)
