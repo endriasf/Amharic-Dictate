@@ -190,8 +190,8 @@ class App:
         top.pack(fill="x")
         self.status = tk.Label(top, text="", fg=T.DIM, bg=bg, font=("Segoe UI", 9), anchor="w")
         self.status.pack(side="left", fill="x", expand=True)
-        mini_btn = tk.Label(top, text="—", fg=T.MUTED, bg=T.BTN, font=("Segoe UI", 10, "bold"),
-                            padx=9, pady=0, cursor="hand2")
+        mini_btn = tk.Label(top, text="Minimize", fg=T.MUTED, bg=T.BTN, font=("Segoe UI", 9),
+                            padx=10, pady=1, cursor="hand2")
         mini_btn.pack(side="right", padx=(10, 0))
         mini_btn.bind("<Button-1>", lambda e: self.minimize())
         mini_btn.bind("<Enter>", lambda e: mini_btn.config(bg=T.BTN_HOVER))
