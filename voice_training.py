@@ -544,12 +544,12 @@ class VoiceTrainingWindow:
             p = json.loads(self._progress_path().read_text(encoding="utf-8"))
             self.progress["value"] = 100.0 * p.get("fraction", 0.0)
             self.train_status.config(text=p.get("message", ""))
-            if p.get("done") and self.cancel_btn.cget("state") == "normal":
+            if p.get("done") and str(self.cancel_btn.cget("state")) == "normal":
                 self.cancel_btn.config(state="disabled")
                 self.refresh_counts(); self.refresh_profile()
         except Exception:
             pass
-        if not training_running(self.profile) and self.cancel_btn.cget("state") == "normal":
+        if not training_running(self.profile) and str(self.cancel_btn.cget("state")) == "normal":
             self.cancel_btn.config(state="disabled")
             self.refresh_counts()
         self.win.after(150, self._poll)

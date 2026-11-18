@@ -138,6 +138,15 @@ def acquire_training_lock(folder: str) -> bool:
 
 
 def main(argv=None):
+    if sys.stdout is None:                         # installed app (no console)
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")
+    for stream in (sys.stdout, sys.stderr):        # Amharic in messages must never stop training
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", required=True)
     ap.add_argument("--data", required=True)
