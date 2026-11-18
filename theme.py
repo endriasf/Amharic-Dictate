@@ -1,22 +1,22 @@
-"""Amharic Dictate colours: the dark green of the installer, used by every window."""
+"""Amharic Dictate colours: neutral dark windows with the logo's green as the accent."""
 
-BG = "#0F3D2A"           # windows
-FIELD = "#0B2E20"        # text areas, lists, entry fields, title strips
-BTN = "#1C5A3E"          # buttons
-BTN_HOVER = "#246B4B"
-ACCENT = "#288C5A"       # main action (Done, Install)
+BG = "#1E2220"           # windows: neutral charcoal
+FIELD = "#16191A"        # text areas, lists, entry fields, title strips
+BTN = "#2B302E"          # buttons
+BTN_HOVER = "#363D3A"
+ACCENT = "#288C5A"       # the green: main action (Done), selected tab, ticks
 ACCENT_HI = "#5CC08A"    # progress, level meter
-BORDER = "#2E7D57"
-SELECT = "#2E7D57"       # selected text / list rows
-TEXT = "#FFFFFF"
-MUTED = "#CFE8DB"        # secondary text
-DIM = "#8FB8A3"          # hints
-DANGER_BTN = "#6B2B2B"
+BORDER = "#3A413E"
+SELECT = "#2C5E45"       # selected text / list rows (muted green)
+TEXT = "#F2F4F3"
+MUTED = "#C2C9C5"        # secondary text
+DIM = "#8B9490"          # hints
+DANGER_BTN = "#5A2D2D"
 DANGER = "#FF8A80"       # error text
 WARNING = "#FFCC66"
 SUCCESS = "#7EE0A8"
 INFO = "#4FC3F7"
-CHIP = "#246B4B"         # suggestion chips
+CHIP = "#2F3A35"         # suggestion chips
 
 
 def apply(root):
@@ -43,7 +43,8 @@ def apply(root):
     s.configure("TSpinbox", fieldbackground=FIELD, foreground=TEXT, arrowcolor=TEXT, background=BTN)
     s.configure("TNotebook", background=BG, bordercolor=BORDER, tabmargins=(2, 4, 2, 0))
     s.configure("TNotebook.Tab", background=FIELD, foreground=MUTED, padding=(12, 5), bordercolor=BORDER)
-    s.map("TNotebook.Tab", background=[("selected", BTN)], foreground=[("selected", TEXT)])
+    s.map("TNotebook.Tab", background=[("selected", BTN)], foreground=[("selected", TEXT)],
+          bordercolor=[("selected", ACCENT)])
     s.configure("TLabelframe", background=BG, bordercolor=BORDER)
     s.configure("TLabelframe.Label", background=BG, foreground=MUTED)
     s.configure("Horizontal.TProgressbar", background=ACCENT_HI, troughcolor=FIELD, bordercolor=BORDER)
