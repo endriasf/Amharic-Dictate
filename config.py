@@ -116,6 +116,8 @@ def load_config() -> dict:
         cfg["max_phrase_s"] = DEFAULT_CONFIG["max_phrase_s"]
     if version < 5:                       # full precision measured noticeably more accurate
         cfg["quantize_cpu"] = False
+    if bundled_model_dir():               # installed app: always the built-in model (it can't download others)
+        cfg["model"] = BUNDLED_MODEL
     cfg["config_version"] = DEFAULT_CONFIG["config_version"]
     save_config(cfg)
     return cfg

@@ -113,15 +113,17 @@ def open_settings(root, cfg: dict, on_save):
 
     # ---- Model
     m = ttk.Frame(nb); nb.add(m, text="Speech model")
-    if bundled_model_dir():      # released app: only the built-in model is offered
-        presets = [(BUNDLED_MODEL, "Amharic Speech-to-Text EFA (built in)")]
-    else:                        # running from source
+    if bundled_model_dir():      # installed app: the built-in model only, shown but not changeable
+        labeled(m, 0, "Model", ttk.Label(m, text="Amharic Speech-to-Text EFA v1 (built in)"))
+        ttk.Label(m, text="An AI speech model made for Amharic dictation. It runs on this computer.",
+                  foreground=T.MUTED).grid(row=1, column=0, columnspan=2, sticky="w", padx=10)
+    else:                        # running from source: developers can try other models
         presets = list(MODEL_PRESETS)
-    if cfg["model"] not in dict(presets):
-        presets.append((cfg["model"], cfg["model"]))
-    labeled(m, 0, "Model", combo(m, "model", presets))
-    ttk.Label(m, text="You can also paste a Hugging Face model id or a local folder path.",
-              foreground=T.MUTED).grid(row=1, column=0, columnspan=2, sticky="w", padx=10)
+        if cfg["model"] not in dict(presets):
+            presets.append((cfg["model"], cfg["model"]))
+        labeled(m, 0, "Model", combo(m, "model", presets))
+        ttk.Label(m, text="Developers: you can also paste a Hugging Face model id or a local folder path.",
+                  foreground=T.MUTED).grid(row=1, column=0, columnspan=2, sticky="w", padx=10)
     labeled(m, 2, "Run on", combo(m, "device", DEVICES))
     check(m, 5, "auto_level", "Even out quiet or fading speech (automatic volume levelling)")
     check(m, 6, "lm_decoding", "Use the Amharic dictionary to pick words when audio is unclear")
