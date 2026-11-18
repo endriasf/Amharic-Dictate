@@ -316,7 +316,7 @@ class App:
         w = self._splash = tk.Toplevel(self.root)
         w.overrideredirect(True)
         w.attributes("-topmost", True)
-        W, H = 440, 300
+        W, H = 460, 320
         w.geometry(f"{W}x{H}+{(w.winfo_screenwidth() - W) // 2}+{(w.winfo_screenheight() - H) // 2}")
         box = tk.Frame(w, bg=T.BG, highlightthickness=1, highlightbackground=T.BORDER)
         box.pack(fill="both", expand=True)
@@ -328,9 +328,10 @@ class App:
         name = tk.Frame(box, bg=T.BG); name.pack()
         tk.Label(name, text="Amharic", font=("Segoe UI Semibold", 20), fg=T.TEXT, bg=T.BG).pack(side="left")
         tk.Label(name, text=" Dictate", font=("Segoe UI Light", 20), fg=T.ACCENT_HI, bg=T.BG).pack(side="left")
-        self._splash_text = tk.Label(box, text="Loading the Amharic speech model…", font=("Segoe UI", 10),
-                                     fg=T.MUTED, bg=T.BG)
-        self._splash_text.pack(pady=(10, 6))
+        self._splash_profile = tk.Label(box, text="", font=("Ebrima", 10), fg=T.ACCENT_HI, bg=T.BG)
+        self._splash_profile.pack(pady=(8, 0))
+        self._splash_text = tk.Label(box, text="Starting…", font=("Ebrima", 10), fg=T.MUTED, bg=T.BG)
+        self._splash_text.pack(pady=(2, 6))
         self._splash_bar = ttk.Progressbar(box, mode="indeterminate", length=260)
         self._splash_bar.pack()
         self._splash_bar.start(12)
@@ -457,17 +458,27 @@ class App:
             t0 = time.time()
             path = ensure_model(self.cfg["model"], lambda s: self.ui_q.put(("loading", s)))
             os.environ["HF_HUB_OFFLINE"] = "1"   # everything is local from here on
+            self.ui_q.put(("loading", "Loading the Amharic dictionary…"))
             from textproc import lexicon
             lexicon()                                    # load the Amharic dictionary once
             level = self.cfg.get("auto_level", True)
             from voiceprofile import active_adapter
             profile, adapter = active_adapter(self.cfg)
+            if profile:
+                self.ui_q.put(("profile", f"Voice profile: {profile}" +
+                               ("" if adapter else "  (no voice training yet)")))
+            self.ui_q.put(("loading", f"Loading the speech model and {profile}'s voice profile…" if adapter
+                           else "Loading the Amharic speech model…"))
             self._loaded_adapter = (str(adapter), os.path.getmtime(adapter)) if adapter else None
             transcriber = Transcriber(path, self.cfg["device"], self.cfg["quantize_cpu"],
                                       use_lm=self.cfg.get("lm_decoding", True),
                                       lm_weight=float(self.cfg.get("lm_weight", 0.25)), auto_level=level,
                                       min_confidence=float(self.cfg.get("min_confidence", 0.45)),
                                       adapter=adapter)
+            if adapter:
+                self.ui_q.put(("profile", f"Voice profile: {profile}" +
+                               (f"  — not used: {transcriber.profile_problem}" if transcriber.profile_problem
+                                else "  ✓ loaded")))
             preview = None
             if transcriber.device == "cpu" and not self.cfg["quantize_cpu"] and self.cfg.get("fast_preview", True):
                 self.ui_q.put(("loading", "Preparing fast live preview…"))
@@ -1120,11 +1131,14 @@ class App:
                         self._splash_message(msg[1])
                     else:
                         self.tray.title = f"{APP_NAME} — {msg[1]}"
+                elif kind == "profile":
+                    if self._splash is not None:
+                        self._splash_profile.config(text=msg[1])
                 elif kind == "ready":
                     if self._splash is not None:     # first start: say so in the start-up window, then close it
                         self._splash_bar.stop()
                         self._splash_bar.config(mode="determinate", value=100)
-                        self._splash_message(msg[1] + (f"\n{msg[2]}" if msg[2] else ""))
+                        self._splash_message(msg[1])
                         self._close_splash(1800)
                     else:                            # reloaded later (new profile, settings): a notification
                         try:
