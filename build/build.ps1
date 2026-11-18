@@ -40,7 +40,7 @@ pyinstaller --noconfirm --clean --windowed `
   --add-data "assets\logo_256.png;assets" `
   --add-data "assets\tray_*.png;assets" `
   --hidden-import voiceprofile --hidden-import voice_training --hidden-import train_local `
-  --hidden-import learning --hidden-import lmdecode --hidden-import wordsync --hidden-import cmdspot --hidden-import theme `
+  --hidden-import learning --hidden-import lmdecode --hidden-import wordsync --hidden-import cmdspot --hidden-import theme --hidden-import updater `
   --hidden-import win32com.client --hidden-import pythoncom --hidden-import pywintypes `
   --exclude-module torchvision --exclude-module torchaudio `
   --exclude-module tensorflow --exclude-module jax --exclude-module flax `

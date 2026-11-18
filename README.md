@@ -228,6 +228,12 @@ Tray icon → **Settings**:
 Everything you dictate is processed on your computer by the built-in AI model. Nothing is
 uploaded, and no online AI service is used.
 
+**Updates:** once a day the app asks GitHub for the version number of the newest release, so it can
+tell you when an update is available (right-click the tray icon → **Download update…**). Nothing about
+you or your dictation is sent, and nothing is downloaded or installed automatically. Turn this off in
+**Settings**, or check by hand with **Check for updates** in the tray menu. To update, run the new
+installer: your settings and voice profiles are kept.
+
 Like any AI, the speech model can mishear words, especially names, rare words and noisy audio.
 Check the text before you send or print it. Voice training and **My words** reduce mistakes. Dictation history is
 **off** by default. Voice-profile recordings and corrections stay in your Windows user folder

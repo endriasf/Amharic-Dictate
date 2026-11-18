@@ -277,6 +277,7 @@ class App:
         make_no_activate(self.root)
         self._build_mini(bg)
 
+        self._update = None                     # (version, page) when a newer release exists
         # ---- tray
         import pystray
         self.tray = pystray.Icon(
@@ -289,6 +290,9 @@ class App:
                 pystray.MenuItem("Settings…", lambda: self.ui_q.put(("settings",))),
                 pystray.MenuItem("Voice profiles…", lambda: self.ui_q.put(("train",))),
                 pystray.MenuItem("How to use…", lambda: self.ui_q.put(("guide",))),
+                pystray.MenuItem(lambda item: f"Download update {self._update[0]}…" if self._update else "",
+                                 lambda: self._open_update(), visible=lambda item: bool(self._update)),
+                pystray.MenuItem("Check for updates", lambda: self._check_updates(manual=True)),
                 pystray.MenuItem("Open history", lambda: self._open_file("history.txt")),
                 pystray.MenuItem("Open log", lambda: self._open_file("error.log")),
                 pystray.MenuItem(f"Quit {APP_NAME}", lambda: self.quit()),
@@ -307,6 +311,7 @@ class App:
             log_error(traceback.format_exc())
         self._reload_model()
         self.root.after(50, self._pump_ui)
+        self.root.after(60_000, self._schedule_update_checks)            # a minute after start-up
 
     # ---------- start-up window (centred, like other apps; closes when the model is ready)
     def _show_splash(self):
@@ -694,6 +699,49 @@ class App:
             "The AI runs on this computer: everything you dictate stays here.\n\n"
             "Created by Endrias F. Abitte",
             parent=self.root)
+
+    # ---------- updates (see updater.py: version number only, never automatic installs)
+    def _check_updates(self, manual=False):
+        if not manual and not self.cfg.get("check_updates", True):
+            return
+        if not manual and time.time() - float(self.cfg.get("last_update_check", 0)) < 20 * 3600:
+            return
+
+        def run():
+            import updater
+            try:
+                found = updater.latest_release(APP_VERSION)
+            except Exception as e:
+                if manual:
+                    self.ui_q.put(("notify", "Couldn't check for updates. Check your internet connection."))
+                log_error(f"Update check: {e}")
+                return
+            self.cfg["last_update_check"] = time.time()
+            try:
+                save_config(self.cfg)
+            except Exception:
+                pass
+            if found:
+                self._update = found
+                try:
+                    self.tray.update_menu()
+                except Exception:
+                    pass
+                self.ui_q.put(("notify", f"Amharic Dictate {found[0]} is available. Right-click the tray icon "
+                                         f"and choose “Download update {found[0]}…”."))
+            elif manual:
+                self.ui_q.put(("notify", f"You have the latest version ({APP_VERSION})."))
+        threading.Thread(target=run, daemon=True).start()
+
+    def _open_update(self):
+        import updater, webbrowser
+        url = self._update[1] if self._update else updater.RELEASES
+        if url.startswith(updater.RELEASES):
+            webbrowser.open(url)
+
+    def _schedule_update_checks(self):
+        self._check_updates()
+        self.root.after(6 * 3600 * 1000, self._schedule_update_checks)     # tries every 6 h; checks at most daily
 
     def open_guide(self):
         from config import guide_file

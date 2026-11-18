@@ -56,6 +56,8 @@ def open_settings(root, cfg: dict, on_save):
     labeled(g, 5, "Output", combo(g, "insert", INSERT_MODES))
     check(g, 6, "beep", "Play a short beep on start/stop")
     check(g, 7, "start_with_windows", "Start automatically when I sign in to Windows")
+    check(g, 11, "check_updates", "Check for new versions once a day (asks GitHub for the latest version "
+                                  "number only — nothing about you or your dictation is sent)")
     check(g, 8, "save_history", "Save a history of transcripts (stored unencrypted on this PC)")
     check(g, 10, "live_word", "Live dictation into Microsoft Word: text appears as you speak, corrections update "
                               "the document, and edits you make in Word update the box")

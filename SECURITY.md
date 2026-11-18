@@ -3,8 +3,13 @@
 Amharic Dictate is built to keep what you say on your computer.
 
 ## How the app protects you
-- **Offline:** the installed app never connects to the internet. The speech model is built in, and
-  model libraries are forced into offline mode. The app opens no network ports.
+- **Offline:** dictation never uses the internet. The speech model is built in, and model libraries
+  are forced into offline mode. The app opens no network ports.
+- **Update check (can be turned off):** the only connection the app makes is, at most once a day, an
+  HTTPS request to the GitHub API for this project's latest release number
+  (`api.github.com/repos/endriasf/Amharic-Dictate/releases/latest`). No voice, text, profile or
+  identifying data is sent. The app never downloads or runs an update by itself; it only opens the
+  project's own releases page when you choose **Download update…**.
 - **Microphone:** opened only while you are dictating or recording a voice-profile sentence, and
   closed straight after.
 - **Clipboard:** dictated text is marked so Windows keeps it out of clipboard history and cloud

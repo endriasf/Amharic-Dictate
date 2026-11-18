@@ -77,6 +77,8 @@ DEFAULT_CONFIG = {
     "font": "Nyala",
     "font_size": 15,
     "start_with_windows": False,
+    "check_updates": True,       # once a day, ask GitHub for the newest version number (no personal data)
+    "last_update_check": 0,
     "live_word": True,           # dictating into Microsoft Word: text appears live and corrections sync
     "save_history": False,       # transcripts may contain sensitive information
     "profile": "",               # active voice profile (folder under %APPDATA%\\AmharicDictate\\profiles)
