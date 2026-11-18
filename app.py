@@ -298,12 +298,59 @@ class App:
         )
         self.tray.run_detached()
 
+        self.root.withdraw()                    # the dictation box appears only when dictating
+        self._splash = None
+        self._show_splash()
         try:
             self.ensure_profile()
         except Exception:
             log_error(traceback.format_exc())
         self._reload_model()
         self.root.after(50, self._pump_ui)
+
+    # ---------- start-up window (centred, like other apps; closes when the model is ready)
+    def _show_splash(self):
+        import tkinter as tk
+        from tkinter import ttk
+        from config import asset_file
+        w = self._splash = tk.Toplevel(self.root)
+        w.overrideredirect(True)
+        w.attributes("-topmost", True)
+        W, H = 440, 300
+        w.geometry(f"{W}x{H}+{(w.winfo_screenwidth() - W) // 2}+{(w.winfo_screenheight() - H) // 2}")
+        box = tk.Frame(w, bg=T.BG, highlightthickness=1, highlightbackground=T.BORDER)
+        box.pack(fill="both", expand=True)
+        try:
+            self._splash_logo = tk.PhotoImage(file=asset_file("logo_256.png")).subsample(2)
+            tk.Label(box, image=self._splash_logo, bg=T.BG).pack(pady=(26, 8))
+        except Exception:
+            pass
+        name = tk.Frame(box, bg=T.BG); name.pack()
+        tk.Label(name, text="Amharic", font=("Segoe UI Semibold", 20), fg=T.TEXT, bg=T.BG).pack(side="left")
+        tk.Label(name, text=" Dictate", font=("Segoe UI Light", 20), fg=T.ACCENT_HI, bg=T.BG).pack(side="left")
+        self._splash_text = tk.Label(box, text="Loading the Amharic speech model…", font=("Segoe UI", 10),
+                                     fg=T.MUTED, bg=T.BG)
+        self._splash_text.pack(pady=(10, 6))
+        self._splash_bar = ttk.Progressbar(box, mode="indeterminate", length=260)
+        self._splash_bar.pack()
+        self._splash_bar.start(12)
+        tk.Label(box, text=f"Version {APP_VERSION}  ·  works offline", font=("Segoe UI", 8),
+                 fg=T.DIM, bg=T.BG).pack(side="bottom", pady=10)
+        w.update_idletasks()
+
+    def _splash_message(self, text):
+        if self._splash is not None:
+            self._splash_text.config(text=text)
+
+    def _close_splash(self, after_ms=0):
+        def close():
+            if self._splash is not None:
+                try:
+                    self._splash.destroy()
+                except Exception:
+                    pass
+                self._splash = None
+        self.root.after(after_ms, close)
 
     # ---------- helpers
     def _apply_font(self):
@@ -408,7 +455,7 @@ class App:
         try:
             self.tray.title = f"{APP_NAME} — loading the speech model…"     # no dictation box while loading
             t0 = time.time()
-            path = ensure_model(self.cfg["model"], lambda s: self.ui_q.put(("status", s)))
+            path = ensure_model(self.cfg["model"], lambda s: self.ui_q.put(("loading", s)))
             os.environ["HF_HUB_OFFLINE"] = "1"   # everything is local from here on
             from textproc import lexicon
             lexicon()                                    # load the Amharic dictionary once
@@ -423,7 +470,7 @@ class App:
                                       adapter=adapter)
             preview = None
             if transcriber.device == "cpu" and not self.cfg["quantize_cpu"] and self.cfg.get("fast_preview", True):
-                self.ui_q.put(("status", "Preparing fast live preview…"))
+                self.ui_q.put(("loading", "Preparing fast live preview…"))
                 preview = Transcriber(path, "cpu", True, auto_level=level,     # int8 copy: quick preview
                                       adapter=adapter if not transcriber.profile_problem else None)
             self.engine = DictationEngine(transcriber, self.cfg, self._on_partial, self._on_phrase, preview)
@@ -445,9 +492,10 @@ class App:
                 who = f"Profile: {profile} (no voice training yet)"
             else:
                 who = ""
-            self.ui_q.put(("notify", f"Ready. Press {self.hotkey_label()} to dictate." + (f"\n{who}" if who else "")))
+            self.ui_q.put(("ready", f"Ready. Press {self.hotkey_label()} to dictate.", who))
         except Exception as e:
             log_error(traceback.format_exc())
+            self.ui_q.put(("splash_close",))
             self.ui_q.put(("show", f"Could not load the model: {e}", "Open Settings from the tray icon to pick another model."))
         finally:
             self.loading = False
@@ -1067,7 +1115,25 @@ class App:
             while True:
                 msg = self.ui_q.get_nowait()
                 kind = msg[0]
-                if kind == "notify":                 # Windows notification, no dictation box
+                if kind == "loading":                # start-up progress: start-up window, or tray tooltip
+                    if self._splash is not None:
+                        self._splash_message(msg[1])
+                    else:
+                        self.tray.title = f"{APP_NAME} — {msg[1]}"
+                elif kind == "ready":
+                    if self._splash is not None:     # first start: say so in the start-up window, then close it
+                        self._splash_bar.stop()
+                        self._splash_bar.config(mode="determinate", value=100)
+                        self._splash_message(msg[1] + (f"\n{msg[2]}" if msg[2] else ""))
+                        self._close_splash(1800)
+                    else:                            # reloaded later (new profile, settings): a notification
+                        try:
+                            self.tray.notify(msg[1] + (f"\n{msg[2]}" if msg[2] else ""), APP_NAME)
+                        except Exception:
+                            pass
+                elif kind == "splash_close":
+                    self._close_splash()
+                elif kind == "notify":               # Windows notification, no dictation box
                     try:
                         self.tray.notify(msg[1], APP_NAME)
                     except Exception:
