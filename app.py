@@ -339,7 +339,7 @@ class App:
                            for _ in range(22)]
         self._wave_t, self._wave_done = 0.0, False
         self._animate_wave()
-        tk.Label(box, text=f"Version {APP_VERSION}  ·  AI speech recognition, fully offline", font=("Segoe UI", 8),
+        tk.Label(box, text=f"Version {APP_VERSION}  ·  AI model: {self.model_name()}  ·  fully offline", font=("Segoe UI", 8),
                  fg=T.DIM, bg=T.BG).pack(side="bottom", pady=10)
         w.update_idletasks()
 
@@ -362,6 +362,13 @@ class App:
             self._splash.after(40, self._animate_wave)
         else:
             self._wave.itemconfig("all", fill=T.ACCENT)
+
+    def model_name(self):
+        """The speech model's name as people should see it."""
+        m = str(self.cfg.get("model", ""))
+        if m == "bundled" or m.replace("\\", "/").rstrip("/").endswith("models/final"):
+            return "Amharic Speech-to-Text EFA v1"
+        return m.replace("\\", "/").rstrip("/").split("/")[-1]
 
     def _splash_message(self, text):
         if self._splash is not None:
@@ -491,8 +498,8 @@ class App:
             if profile:
                 self.ui_q.put(("profile", f"Voice profile: {profile}" +
                                ("" if adapter else "  (no voice training yet)")))
-            self.ui_q.put(("loading", f"Loading the AI speech model and {profile}'s voice profile…" if adapter
-                           else "Loading the Amharic AI speech model…"))
+            self.ui_q.put(("loading", f"Loading {self.model_name()} and {profile}'s voice profile…" if adapter
+                           else f"Loading {self.model_name()}…"))
             self._loaded_adapter = (str(adapter), os.path.getmtime(adapter)) if adapter else None
             transcriber = Transcriber(path, self.cfg["device"], self.cfg["quantize_cpu"],
                                       use_lm=self.cfg.get("lm_decoding", True),
@@ -680,7 +687,7 @@ class App:
         messagebox.showinfo(
             f"About {APP_NAME}",
             f"{APP_NAME} {APP_VERSION}\n"
-            "Offline Amharic dictation for Windows, powered by AI speech recognition.\n\n"
+            "Offline Amharic dictation for Windows, powered by Amharic Speech-to-Text EFA v1,\nan AI speech model that runs on this computer.\n\n"
             f"{model_credit}\n\n"
             "Amharic dictionary: Leipzig Corpora Collection (CC BY 4.0).\n"
             "Reading sentences: Leipzig Corpora Collection, Amharic Wikipedia (CC BY 4.0).\n\n"

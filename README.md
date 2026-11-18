@@ -7,7 +7,7 @@
 
 # Amharic Dictate
 
-**Free, offline Amharic dictation for Windows, powered by AI.** Speak Amharic and your words appear
+**Free, offline Amharic dictation for Windows, powered by the Amharic Speech-to-Text EFA v1 AI speech model.** Speak Amharic and your words appear
 as text in Word, Outlook, Teams, your browser or any other program.
 
 Free and open source.
