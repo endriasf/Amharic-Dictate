@@ -284,9 +284,10 @@ class App:
             APP_NAME, tray_image("busy"), f"{APP_NAME} (loading…)",
             menu=pystray.Menu(
                 pystray.MenuItem("Start / stop dictation", lambda: self.toggle(), default=True),
-                pystray.MenuItem("Pause / resume", lambda: self.toggle_pause()),
-                pystray.MenuItem("Show dictation box", lambda: self.ui_q.put(("restore",))),
-                pystray.MenuItem("Delete last word", lambda: self.delete_word()),
+                pystray.MenuItem("Pause / resume", lambda: self.toggle_pause(),
+                                 visible=lambda item: self.active),          # only while dictating
+                pystray.MenuItem("Show dictation box", lambda: self.ui_q.put(("restore",)),
+                                 visible=lambda item: self.active),
                 pystray.MenuItem("Settings…", lambda: self.ui_q.put(("settings",))),
                 pystray.MenuItem("Voice profiles…", lambda: self.ui_q.put(("train",))),
                 pystray.MenuItem("How to use…", lambda: self.ui_q.put(("guide",))),
@@ -475,6 +476,13 @@ class App:
         w, h = 860, 280
         sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
         self.root.geometry(f"{w}x{h}+{(sw - w) // 2}+{sh - h - 90}")
+
+    def _refresh_tray_menu(self):
+        """Pause / Show dictation box appear in the tray menu only while dictating."""
+        try:
+            self.tray.update_menu()
+        except Exception:
+            pass
 
     def _open_history(self):
         from config import history_file
@@ -957,6 +965,7 @@ class App:
                         else:
                             log_error(link.error)
                 self.active = True
+                self._refresh_tray_menu()
                 self.engine.on_speech_start = self._speech_started if self.word else None
                 self.engine.start()
                 self._add_session_hotkeys()
@@ -968,6 +977,7 @@ class App:
                 self.ui_q.put(("bar", True))
             else:
                 self.active = False
+                self._refresh_tray_menu()
                 self._remove_session_hotkeys()
                 self.ui_q.put(("bar", False))
                 self.ui_q.put(("status", "Discarding…" if discard else "Finishing…"))
@@ -994,6 +1004,7 @@ class App:
         except Exception as e:
             log_error(traceback.format_exc())
             self.active = False
+            self._refresh_tray_menu()
             try:
                 self.mic_release("dictation")
             except Exception:
