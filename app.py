@@ -10,6 +10,7 @@ import theme as T
 import os
 import queue
 import sys
+import re
 import threading
 import time
 import traceback
@@ -363,7 +364,7 @@ class App:
         w = self._splash = tk.Toplevel(self.root)
         w.overrideredirect(True)
         w.attributes("-topmost", True)
-        W, H = 460, 390
+        W, H = 460, 420
         w.geometry(f"{W}x{H}+{(w.winfo_screenwidth() - W) // 2}+{(w.winfo_screenheight() - H) // 2}")
         box = tk.Frame(w, bg=T.BG, highlightthickness=1, highlightbackground=T.BORDER)
         box.pack(fill="both", expand=True)
@@ -384,6 +385,10 @@ class App:
         self._splash_text = tk.Label(box, text="Opening Amharic Dictate…", font=("Ebrima", 10), fg=T.MUTED, bg=T.BG,
                                      wraplength=400, justify="center")
         self._splash_text.pack(pady=(2, 6))
+        # how far along it is: a percentage that follows the start-up steps
+        self._pct, self._pct_span, self._pct_step = 0.0, (0, 18), 1
+        self._splash_pct = tk.Label(box, text="0%", font=("Segoe UI Semibold", 15), fg=T.ACCENT_HI, bg=T.BG)
+        self._splash_pct.pack(pady=(4, 0))
         # loading indicator: a moving sound wave (rounded bars), not a progress bar
         self._wave = tk.Canvas(box, width=264, height=44, bg=T.BG, highlightthickness=0)
         self._wave.pack(pady=(2, 0))
@@ -395,10 +400,18 @@ class App:
                  fg=T.DIM, bg=T.BG).pack(side="bottom", pady=10)
         w.update_idletasks()
 
+    # each start-up step's share of the percentage; within a step it creeps toward the step's end
+    _STEP_SPANS = {1: (0, 18), 2: (18, 28), 3: (28, 86), 4: (86, 95), 5: (95, 99)}
+    _STEP_SPEED = {1: 0.008, 2: 0.03, 3: 0.0025, 4: 0.01, 5: 0.05}     # step 3 (the AI model) is the slow one
+
     def _animate_wave(self):
         import math
         if self._splash is None:
             return
+        lo, hi = self._pct_span
+        if not self._wave_done:
+            self._pct = max(self._pct, lo) + (hi - max(self._pct, lo)) * self._STEP_SPEED.get(self._pct_step, 0.01)
+            self._splash_pct.config(text=f"{int(self._pct)}%")
         self._wave_t += 0.16
         n = len(self._wave_bars)
         for i, bar in enumerate(self._wave_bars):
@@ -1314,6 +1327,10 @@ class App:
                 if kind == "loading":                # start-up progress: start-up window, or tray tooltip
                     if self._splash is not None:
                         self._splash_message(msg[1])
+                        m = re.match(r"Step (\d) of 5", msg[1])
+                        if m:
+                            self._pct_step = int(m.group(1))
+                            self._pct_span = self._STEP_SPANS.get(self._pct_step, self._pct_span)
                     else:
                         self.tray.title = f"{APP_TITLE} — {msg[1]}"
                 elif kind == "profile":
@@ -1322,6 +1339,8 @@ class App:
                 elif kind == "ready":
                     if self._splash is not None:     # first start: say so in the start-up window, then close it
                         self._wave_done = True
+                        self._pct = 100
+                        self._splash_pct.config(text="100%")
                         self._splash_message(msg[1])
                         self._close_splash(1800)
                     else:                            # reloaded later (new profile, settings): a notification
