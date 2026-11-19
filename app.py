@@ -617,18 +617,8 @@ class App:
             # The fast live-preview copy is made after "Ready", in the background: dictation works at once
             # (previews use the main model until the copy is ready, or if it can't be made on this CPU).
             self.engine = DictationEngine(transcriber, self.cfg, self._on_partial, self._on_phrase, None)
-            if transcriber.device == "cpu" and not self.cfg["quantize_cpu"] and self.cfg.get("fast_preview", True):
-                engine = self.engine
-
-                def make_preview():
-                    try:
-                        quick = Transcriber.quick_copy(transcriber, path, adapter)
-                        if self.engine is engine:
-                            engine.preview = quick
-                        log_error(f"Memory with live preview ready: {memory_mb(True)}")
-                    except Exception:
-                        log_error(traceback.format_exc())
-                threading.Thread(target=make_preview, daemon=True).start()
+            self._start_preview(self.engine)
+            self._last_used = time.time()
             self.apply_my_words()
             self.apply_learning()
             here = os.path.dirname(os.path.abspath(__file__))
@@ -761,6 +751,47 @@ class App:
             vt.launch_training(self.cfg, profile)
             self.ui_q.put(("notify", f"Improving your voice profile in the background from {new} new corrections. "
                                      "You can keep working."))
+
+    def _start_preview(self, engine):
+        """Make the fast live-preview copy in the background (previews use the main model until then)."""
+        from engine import Transcriber
+        tr = engine.transcribe
+        if not (tr.device == "cpu" and not self.cfg["quantize_cpu"] and self.cfg.get("fast_preview", True)):
+            return
+
+        def make_preview():
+            try:
+                quick = Transcriber.quick_copy(tr, tr._model_path, tr._adapter)
+                if self.engine is engine and tr.loaded:
+                    engine.preview = quick
+                    log_error(f"Memory with live preview ready: {memory_mb(True)}")
+            except Exception:
+                log_error(traceback.format_exc())
+        threading.Thread(target=make_preview, daemon=True).start()
+
+    def _check_idle_unload(self):
+        """Free the speech model's memory after a while without dictation (loaded again on the hotkey)."""
+        now = time.time()
+        if now < getattr(self, "_next_idle_check", 0):
+            return
+        self._next_idle_check = now + 30
+        if not self.cfg.get("free_memory_when_idle", True) or not self.engine or self.loading or self.active:
+            return
+        if self._train_win is not None:
+            return
+        idle = now - getattr(self, "_last_used", now)
+        if idle < 60 * float(self.cfg.get("free_memory_minutes", 10)) or not self.engine.transcribe.loaded:
+            return
+        engine = self.engine
+
+        def free():
+            quick = engine.preview
+            engine.preview = engine.transcribe
+            if quick is not engine.transcribe:
+                quick.unload()
+            engine.transcribe.unload()
+            log_error(f"Memory, freed while not dictating: {memory_mb(True)}")
+        threading.Thread(target=free, daemon=True).start()
 
     def _check_profile_update(self):
         """Load a voice profile as soon as its background training finishes (when not dictating)."""
@@ -1097,8 +1128,28 @@ class App:
                 self.tray.icon = tray_image("active")
                 if self.cfg["beep"]:
                     beep(880)
-                self.ui_q.put(("show", "● Listening… speak Amharic" +
-                               ("   ·   live in Word" if self.word else ""), ""))
+                ready = "● Listening… speak Amharic" + ("   ·   live in Word" if self.word else "")
+                self._last_used = time.time()
+                if self.engine.transcribe.loaded:
+                    self.ui_q.put(("show", ready, ""))
+                else:                                    # memory was freed while idle: load it again
+                    self.ui_q.put(("show", "Loading the speech engine… one moment", ""))
+                    engine = self.engine
+
+                    def wake():
+                        try:
+                            engine.transcribe.ensure_loaded()   # what you say meanwhile is kept
+                        except Exception as e:
+                            log_error(traceback.format_exc())
+                            from diagnose import explain
+                            what, todo = explain(e, "loading")
+                            self.ui_q.put(("show", what, todo))
+                            return
+                        if self.active and self.engine is engine:
+                            self.ui_q.put(("status", "● Ready — speak Amharic" +
+                                           ("   ·   live in Word" if self.word else "")))
+                        self._start_preview(engine)
+                    threading.Thread(target=wake, daemon=True).start()
                 self.ui_q.put(("bar", True))
             else:
                 self.active = False
@@ -1108,6 +1159,7 @@ class App:
                 self.ui_q.put(("status", "Discarding…" if discard else "Finishing…"))
                 text = self.engine.stop()
                 self.mic_release("dictation")
+                self._last_used = time.time()
                 mem = memory_mb()                        # note big jumps in memory use, for the technical log
                 if mem > getattr(self, "_mem_logged", 0) + 500:
                     log_error(f"Memory after a dictation: {memory_mb(True)}")
@@ -1433,6 +1485,7 @@ class App:
         if self.sugg.winfo_ismapped() and not (self.engine and self.active and self.engine.replacing):
             self.sugg.pack_forget()
         self._check_profile_update()
+        self._check_idle_unload()
         self._update_mini()
         level = self.engine.level if (self.engine and self.active) else 0.0
         self.meter.coords(self.meter_bar, 0, 0, min(80, int(level * 1600)), 8)

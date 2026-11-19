@@ -127,9 +127,41 @@ class Transcriber:
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
-        from config import log_error, memory_mb
-        log_error(f"Memory, AI engine started: {memory_mb(True)}")
+        self._model_path, self._quantize, self._adapter = model_path, quantize_cpu, adapter
         self.processor = AutoProcessor.from_pretrained(model_path)
+        self.profile_problem = ""
+        self.model = None
+        self._load_weights()
+        self._lock = threading.Lock()
+        self.want_alternatives = False
+        self.last_alternatives = {}
+        tok = self.processor.tokenizer
+        self._id2tok = {i: t for t, i in tok.get_vocab().items()}
+        self._blank = tok.pad_token_id
+        self.auto_level = auto_level
+        self.min_confidence = min_confidence
+        self.last_greedy = ""
+        self.last_confidence = 1.0
+        self.last_spot = ""
+        self.spotter = None
+        try:                                       # spoken punctuation said on its own
+            from cmdspot import CommandSpotter
+            self.spotter = CommandSpotter(self._id2tok, self._blank)
+        except Exception:
+            pass
+        self.lm = None
+        if use_lm:
+            from lmdecode import LexiconDecoder
+            self.lm = LexiconDecoder(self._id2tok, self._blank, weight=lm_weight)
+
+    def _load_weights(self):
+        """Load the speech model's weights (and merge the voice profile). ~2 s once the engine is running."""
+        import gc
+        torch = self.torch
+        from transformers import AutoModelForCTC
+        from config import log_error, memory_mb
+        model_path, quantize_cpu, adapter, device = self._model_path, self._quantize, self._adapter, self.device
+        log_error(f"Memory, before loading the model: {memory_mb(True)}")
         model = AutoModelForCTC.from_pretrained(model_path).eval()
         log_error(f"Memory, model loaded ({'int8' if quantize_cpu else 'full'}): {memory_mb(True)}")
         self.profile_problem = ""
@@ -153,33 +185,27 @@ class Transcriber:
                         for n, b in list(mod._buffers.items()):
                             if b is not None:
                                 mod._buffers[n] = b.clone()
-                import gc
                 gc.collect()
                 log_error(f"Memory, model shrunk to int8: {memory_mb(True)}")
         else:
             model = model.half()
         self.model = model.to(device)
-        self._lock = threading.Lock()
-        self.want_alternatives = False
-        self.last_alternatives = {}
-        tok = self.processor.tokenizer
-        self._id2tok = {i: t for t, i in tok.get_vocab().items()}
-        self._blank = tok.pad_token_id
-        self.auto_level = auto_level
-        self.min_confidence = min_confidence
-        self.last_greedy = ""
-        self.last_confidence = 1.0
-        self.last_spot = ""
-        self.spotter = None
-        try:                                       # spoken punctuation said on its own
-            from cmdspot import CommandSpotter
-            self.spotter = CommandSpotter(self._id2tok, self._blank)
-        except Exception:
-            pass
-        self.lm = None
-        if use_lm:
-            from lmdecode import LexiconDecoder
-            self.lm = LexiconDecoder(self._id2tok, self._blank, weight=lm_weight)
+
+    @property
+    def loaded(self) -> bool:
+        return self.model is not None
+
+    def unload(self):
+        """Free the model's memory (the AI engine stays running, so loading again takes seconds)."""
+        import gc
+        with self._lock:
+            self.model = None
+        gc.collect()
+
+    def ensure_loaded(self):
+        with self._lock:
+            if self.model is None:
+                self._load_weights()
 
     @classmethod
     def quick_copy(cls, main: "Transcriber", model_path: str, adapter=None) -> "Transcriber":
@@ -195,6 +221,8 @@ class Transcriber:
             from lmdecode import level_audio
             audio = level_audio(audio, SR)
         with self._lock, self.torch.inference_mode():
+            if self.model is None:                 # freed while idle: load again
+                self._load_weights()
             inputs = self.processor(audio, sampling_rate=SR, return_tensors="pt")
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
             if self.device == "cuda":

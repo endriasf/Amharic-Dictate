@@ -85,6 +85,8 @@ DEFAULT_CONFIG = {
     "font_size": 15,
     "start_with_windows": False,
     "history_dir": "",           # folder for history.txt; empty = the app's settings folder
+    "free_memory_when_idle": True,   # unload the speech model after a while without dictation
+    "free_memory_minutes": 10,
     "appearance": "system",      # "system" (follow Windows), "dark" or "light"
     "check_updates": True,       # once a day, ask GitHub for the newest version number (no personal data)
     "last_update_check": 0,
