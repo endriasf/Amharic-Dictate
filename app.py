@@ -6,8 +6,11 @@ press the hotkey again: the text is pasted into the app you're working in.
 All speech is processed on this computer.
 """
 
-import theme as T
 import os
+# The AI engine (oneDNN) keeps compiled code plus working memory for every different clip length it has
+# seen (by default up to 1024), which can add up to gigabytes over a day of dictation. Keep a few.
+os.environ.setdefault("ONEDNN_PRIMITIVE_CACHE_CAPACITY", "16")
+import theme as T
 import queue
 import sys
 import re
@@ -15,7 +18,7 @@ import threading
 import time
 import traceback
 
-from config import (APP_NAME, APP_TITLE, APP_VERSION, app_dir, history_file, load_config, log_error, save_config,
+from config import (memory_mb, APP_NAME, APP_TITLE, APP_VERSION, app_dir, history_file, load_config, log_error, save_config,
                     set_start_with_windows)
 
 RELOAD_KEYS = ("model", "device", "quantize_cpu", "auto_level", "lm_decoding", "lm_weight", "fast_preview", "profile")
@@ -580,6 +583,10 @@ class App:
         self._step_times = getattr(self, "_step_times", []) + [(n, time.time())]   # start-up timing, for the log
 
     def _load_model(self):
+        if getattr(self, "engine", None) is not None and not self.active:   # reload: free the old model first
+            self.engine = None
+            import gc
+            gc.collect()
         self._step(1, "Starting the AI engine…")
         from engine import DictationEngine, Transcriber, ensure_model
         try:
@@ -618,6 +625,7 @@ class App:
                         quick = Transcriber.quick_copy(transcriber, path, adapter)
                         if self.engine is engine:
                             engine.preview = quick
+                        log_error(f"Memory with live preview ready: {memory_mb()} MB")
                     except Exception:
                         log_error(traceback.format_exc())
                 threading.Thread(target=make_preview, daemon=True).start()
@@ -644,7 +652,8 @@ class App:
             st = getattr(self, "_step_times", [])
             if st:
                 parts = [f"step {a}: {t2 - t1:.1f}s" for (a, t1), (_, t2) in zip(st, st[1:] + [(0, time.time())])]
-                log_error("Start-up timing: " + ", ".join(parts) + f" (total {time.time() - st[0][1]:.1f}s)")
+                log_error("Start-up timing: " + ", ".join(parts) + f" (total {time.time() - st[0][1]:.1f}s)"
+                          + f", memory {memory_mb()} MB")
             self._step_times = []
         except Exception as e:
             log_error(traceback.format_exc())
@@ -1099,6 +1108,10 @@ class App:
                 self.ui_q.put(("status", "Discarding…" if discard else "Finishing…"))
                 text = self.engine.stop()
                 self.mic_release("dictation")
+                mem = memory_mb()                        # note big jumps in memory use, for the technical log
+                if mem > getattr(self, "_mem_logged", 0) + 500:
+                    log_error(f"Memory after a dictation: {mem} MB")
+                    self._mem_logged = mem
                 link, self.word = self.word, None
                 in_document = False
                 if link is not None:
