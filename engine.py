@@ -116,6 +116,21 @@ def ctc_alternatives(probs: np.ndarray, id2tok: dict, blank: int, min_conf=0.75,
     return out
 
 
+_MODEL_THREAD = None
+
+
+def _on_model_thread(fn):
+    """Run fn on one permanent thread. PyTorch's memory manager can only hand memory back to Windows from
+    the thread that took it, so every model is loaded and freed on the same thread."""
+    global _MODEL_THREAD
+    if _MODEL_THREAD is None:
+        from concurrent.futures import ThreadPoolExecutor
+        _MODEL_THREAD = ThreadPoolExecutor(max_workers=1, thread_name_prefix="model")
+    if threading.current_thread().name.startswith("model"):
+        return fn()
+    return _MODEL_THREAD.submit(fn).result()
+
+
 class Transcriber:
     def __init__(self, model_path: str, device: str = "auto", quantize_cpu: bool = True,
                  use_lm: bool = False, lm_weight: float = 0.25, auto_level: bool = True,
@@ -155,6 +170,9 @@ class Transcriber:
             self.lm = LexiconDecoder(self._id2tok, self._blank, weight=lm_weight)
 
     def _load_weights(self):
+        _on_model_thread(self._load_weights_here)
+
+    def _load_weights_here(self):
         """Load the speech model's weights (and merge the voice profile). ~2 s once the engine is running."""
         import gc
         torch = self.torch
@@ -198,9 +216,12 @@ class Transcriber:
     def unload(self):
         """Free the model's memory (the AI engine stays running, so loading again takes seconds)."""
         import gc
+
+        def drop():
+            self.model = None                      # freed here, on the thread that loaded it
+            gc.collect()
         with self._lock:
-            self.model = None
-        gc.collect()
+            _on_model_thread(drop)
 
     def ensure_loaded(self):
         with self._lock:

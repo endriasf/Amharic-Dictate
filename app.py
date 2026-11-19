@@ -14,6 +14,7 @@ os.environ.setdefault("ONEDNN_PRIMITIVE_CACHE_CAPACITY", "16")
 # delay and some later activity. Hand it back at once, so freed models really leave Task Manager.
 os.environ.setdefault("MIMALLOC_PURGE_DELAY", "0")     # mimalloc 2.x
 os.environ.setdefault("MIMALLOC_RESET_DELAY", "0")     # mimalloc 1.x
+os.environ.setdefault("MIMALLOC_ABANDONED_PAGE_PURGE", "1")
 import theme as T
 import queue
 import sys
