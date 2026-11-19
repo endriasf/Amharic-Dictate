@@ -127,8 +127,11 @@ class Transcriber:
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
+        from config import log_error, memory_mb
+        log_error(f"Memory, AI engine started: {memory_mb(True)}")
         self.processor = AutoProcessor.from_pretrained(model_path)
         model = AutoModelForCTC.from_pretrained(model_path).eval()
+        log_error(f"Memory, model loaded ({'int8' if quantize_cpu else 'full'}): {memory_mb(True)}")
         self.profile_problem = ""
         if adapter is not None:                    # personal voice profile: merged into the weights
             from voiceprofile import merge_adapter
@@ -136,7 +139,12 @@ class Transcriber:
         if device == "cpu":
             torch.set_num_threads(max(1, (os.cpu_count() or 2) - 1))
             if quantize_cpu:
-                model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
+                # in place: no second full-size copy of the model while it is shrunk (that cost ~2.4 GB)
+                model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8,
+                                                            inplace=True)
+                import gc
+                gc.collect()
+                log_error(f"Memory, model shrunk to int8: {memory_mb(True)}")
         else:
             model = model.half()
         self.model = model.to(device)

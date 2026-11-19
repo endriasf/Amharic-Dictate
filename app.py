@@ -625,7 +625,7 @@ class App:
                         quick = Transcriber.quick_copy(transcriber, path, adapter)
                         if self.engine is engine:
                             engine.preview = quick
-                        log_error(f"Memory with live preview ready: {memory_mb()} MB")
+                        log_error(f"Memory with live preview ready: {memory_mb(True)}")
                     except Exception:
                         log_error(traceback.format_exc())
                 threading.Thread(target=make_preview, daemon=True).start()
@@ -653,7 +653,7 @@ class App:
             if st:
                 parts = [f"step {a}: {t2 - t1:.1f}s" for (a, t1), (_, t2) in zip(st, st[1:] + [(0, time.time())])]
                 log_error("Start-up timing: " + ", ".join(parts) + f" (total {time.time() - st[0][1]:.1f}s)"
-                          + f", memory {memory_mb()} MB")
+                          + f", memory {memory_mb(True)}")
             self._step_times = []
         except Exception as e:
             log_error(traceback.format_exc())
@@ -1110,7 +1110,7 @@ class App:
                 self.mic_release("dictation")
                 mem = memory_mb()                        # note big jumps in memory use, for the technical log
                 if mem > getattr(self, "_mem_logged", 0) + 500:
-                    log_error(f"Memory after a dictation: {mem} MB")
+                    log_error(f"Memory after a dictation: {memory_mb(True)}")
                     self._mem_logged = mem
                 link, self.word = self.word, None
                 in_document = False

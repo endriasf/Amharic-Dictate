@@ -143,8 +143,9 @@ def log_error(msg: str):
         f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + msg + "\n")
 
 
-def memory_mb() -> int:
-    """This app's own memory use in MB, as Task Manager shows it (0 if it can't be read)."""
+def memory_mb(detail: bool = False):
+    """This app's memory use in MB: committed (private bytes). With detail=True, a text
+    'in use X MB, reserved Y MB' where 'in use' is the RAM it holds right now (close to Task Manager)."""
     try:
         import ctypes
         from ctypes import wintypes
@@ -163,10 +164,13 @@ def memory_mb() -> int:
         c = PMC()
         c.cb = ctypes.sizeof(PMC)
         if not k32.K32GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb):
-            return 0
-        return int(c.PrivateUsage // (1024 * 1024))
+            return "?" if detail else 0
+        mb = 1024 * 1024
+        if detail:
+            return f"in use {c.WorkingSetSize // mb} MB, reserved {c.PrivateUsage // mb} MB"
+        return int(c.PrivateUsage // mb)
     except Exception:
-        return 0
+        return "?" if detail else 0
 
 
 def is_store_app() -> bool:
