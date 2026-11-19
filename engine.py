@@ -142,6 +142,17 @@ class Transcriber:
                 # in place: no second full-size copy of the model while it is shrunk (that cost ~2.4 GB)
                 model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8,
                                                             inplace=True)
+                # The full-size weights were read into shared blocks; the remaining small pieces (layer
+                # norms, convolutions) still point into them and keep the whole 2.4 GB alive. Give each piece
+                # its own copy so the full-size weights are really freed.
+                with torch.no_grad():
+                    for mod in model.modules():
+                        for n, p in list(mod._parameters.items()):
+                            if p is not None:
+                                mod._parameters[n] = torch.nn.Parameter(p.detach().clone(), requires_grad=False)
+                        for n, b in list(mod._buffers.items()):
+                            if b is not None:
+                                mod._buffers[n] = b.clone()
                 import gc
                 gc.collect()
                 log_error(f"Memory, model shrunk to int8: {memory_mb(True)}")
