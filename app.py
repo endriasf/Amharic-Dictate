@@ -10,6 +10,10 @@ import os
 # The AI engine (oneDNN) keeps compiled code plus working memory for every different clip length it has
 # seen (by default up to 1024), which can add up to gigabytes over a day of dictation. Keep a few.
 os.environ.setdefault("ONEDNN_PRIMITIVE_CACHE_CAPACITY", "16")
+# PyTorch on Windows uses the mimalloc memory manager, which hands freed memory back to Windows only after a
+# delay and some later activity. Hand it back at once, so freed models really leave Task Manager.
+os.environ.setdefault("MIMALLOC_PURGE_DELAY", "0")     # mimalloc 2.x
+os.environ.setdefault("MIMALLOC_RESET_DELAY", "0")     # mimalloc 1.x
 import theme as T
 import queue
 import sys
@@ -791,6 +795,8 @@ class App:
                 quick.unload()
             engine.transcribe.unload()
             log_error(f"Memory, freed while not dictating: {memory_mb(True)}")
+            time.sleep(60)
+            log_error(f"Memory, a minute after freeing: {memory_mb(True)}")
         threading.Thread(target=free, daemon=True).start()
 
     def _check_profile_update(self):
