@@ -39,6 +39,10 @@ python train_amharic_ctc.py --sources waxal fleurs --output_dir am-w2vbert
    `python amharic_asr_benchmark.py --data clips --models C:/path/final badrex/Ethio-ASR-amharic`
 3. In the app's `config.json`, set `"model": "C:/path/final"`.
 
+## Making it smaller
+See [README_COMPRESSION.md](README_COMPRESSION.md): `compression_eval.py` measures how much
+accuracy fp16, int8 and 4/6-bit versions of a model lose (groundwork for an iPhone app).
+
 ## Notes
 - Output is unpunctuated Ethiopic words, which matches what the app expects today.
 - `--normalize_homophones` trains on standardized spelling (ሀ/ሰ/አ/ጸ forms). This scores better,
