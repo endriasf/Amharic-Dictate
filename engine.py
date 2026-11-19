@@ -127,19 +127,11 @@ class Transcriber:
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
+        self._model_path, self._quantize, self._adapter = model_path, quantize_cpu, adapter
         self.processor = AutoProcessor.from_pretrained(model_path)
-        model = AutoModelForCTC.from_pretrained(model_path).eval()
         self.profile_problem = ""
-        if adapter is not None:                    # personal voice profile: merged into the weights
-            from voiceprofile import merge_adapter
-            self.profile_problem = merge_adapter(model, adapter)
-        if device == "cpu":
-            torch.set_num_threads(max(1, (os.cpu_count() or 2) - 1))
-            if quantize_cpu:
-                model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
-        else:
-            model = model.half()
-        self.model = model.to(device)
+        self.model = None
+        self._load_weights()
         self._lock = threading.Lock()
         self.want_alternatives = False
         self.last_alternatives = {}
@@ -162,6 +154,59 @@ class Transcriber:
             from lmdecode import LexiconDecoder
             self.lm = LexiconDecoder(self._id2tok, self._blank, weight=lm_weight)
 
+    def _load_weights(self):
+        """Load the speech model's weights (and merge the voice profile). ~2 s once the engine is running."""
+        import gc
+        torch = self.torch
+        from transformers import AutoModelForCTC
+        from config import log_error, memory_mb
+        model_path, quantize_cpu, adapter, device = self._model_path, self._quantize, self._adapter, self.device
+        log_error(f"Memory, before loading the model: {memory_mb(True)}")
+        model = AutoModelForCTC.from_pretrained(model_path).eval()
+        log_error(f"Memory, model loaded ({'int8' if quantize_cpu else 'full'}): {memory_mb(True)}")
+        self.profile_problem = ""
+        if adapter is not None:                    # personal voice profile: merged into the weights
+            from voiceprofile import merge_adapter
+            self.profile_problem = merge_adapter(model, adapter)
+        if device == "cpu":
+            torch.set_num_threads(max(1, (os.cpu_count() or 2) - 1))
+            if quantize_cpu:
+                # in place: no second full-size copy of the model while it is shrunk (that cost ~2.4 GB)
+                model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8,
+                                                            inplace=True)
+                # The full-size weights were read into shared blocks; the remaining small pieces (layer
+                # norms, convolutions) still point into them and keep the whole 2.4 GB alive. Give each piece
+                # its own copy so the full-size weights are really freed.
+                with torch.no_grad():
+                    for mod in model.modules():
+                        for n, p in list(mod._parameters.items()):
+                            if p is not None:
+                                mod._parameters[n] = torch.nn.Parameter(p.detach().clone(), requires_grad=False)
+                        for n, b in list(mod._buffers.items()):
+                            if b is not None:
+                                mod._buffers[n] = b.clone()
+                gc.collect()
+                log_error(f"Memory, model shrunk to int8: {memory_mb(True)}")
+        else:
+            model = model.half()
+        self.model = model.to(device)
+
+    @property
+    def loaded(self) -> bool:
+        return self.model is not None
+
+    def unload(self):
+        """Free the model's memory (the AI engine stays running, so loading again takes seconds)."""
+        import gc
+        with self._lock:
+            self.model = None
+        gc.collect()
+
+    def ensure_loaded(self):
+        with self._lock:
+            if self.model is None:
+                self._load_weights()
+
     @classmethod
     def quick_copy(cls, main: "Transcriber", model_path: str, adapter=None) -> "Transcriber":
         """The fast int8 copy for the live preview. Loaded the proven way (from disk, then quantized),
@@ -176,6 +221,8 @@ class Transcriber:
             from lmdecode import level_audio
             audio = level_audio(audio, SR)
         with self._lock, self.torch.inference_mode():
+            if self.model is None:                 # freed while idle: load again
+                self._load_weights()
             inputs = self.processor(audio, sampling_rate=SR, return_tensors="pt")
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
             if self.device == "cuda":

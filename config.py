@@ -6,7 +6,7 @@ from pathlib import Path
 
 APP_NAME = "AmharicDictate"        # internal id: settings folder, start-up entry, single-instance lock
 APP_TITLE = "Amharic Dictate"      # what people see in windows, menus and messages
-APP_VERSION = "2.4.1"
+APP_VERSION = "2.4.2"
 
 BUNDLED_MODEL = "bundled"     # the speech model packaged inside the installer
 
@@ -85,6 +85,8 @@ DEFAULT_CONFIG = {
     "font_size": 15,
     "start_with_windows": False,
     "history_dir": "",           # folder for history.txt; empty = the app's settings folder
+    "free_memory_when_idle": True,   # unload the speech model after a while without dictation
+    "free_memory_minutes": 10,
     "appearance": "system",      # "system" (follow Windows), "dark" or "light"
     "check_updates": True,       # once a day, ask GitHub for the newest version number (no personal data)
     "last_update_check": 0,
@@ -143,25 +145,34 @@ def log_error(msg: str):
         f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + msg + "\n")
 
 
-def memory_mb() -> int:
-    """This app's own memory use in MB, as Task Manager shows it (0 if it can't be read)."""
+def memory_mb(detail: bool = False):
+    """This app's memory use in MB: committed (private bytes). With detail=True, a text
+    'in use X MB, reserved Y MB' where 'in use' is the RAM it holds right now (close to Task Manager)."""
     try:
         import ctypes
         from ctypes import wintypes
 
-        class PMC(ctypes.Structure):
+        class PMC(ctypes.Structure):          # PROCESS_MEMORY_COUNTERS_EX
             _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD)] + [
                 (n, ctypes.c_size_t) for n in ("PeakWorkingSetSize", "WorkingSetSize", "QuotaPeakPagedPoolUsage",
                                                "QuotaPagedPoolUsage", "QuotaPeakNonPagedPoolUsage",
                                                "QuotaNonPagedPoolUsage", "PagefileUsage", "PeakPagefileUsage",
                                                "PrivateUsage")]
-        c = PMC(); c.cb = ctypes.sizeof(PMC)
-        k32 = ctypes.windll.kernel32
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
         k32.GetCurrentProcess.restype = wintypes.HANDLE
-        ctypes.windll.psapi.GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb)
-        return int(c.PrivateUsage // (1024 * 1024))
+        k32.GetCurrentProcess.argtypes = []
+        k32.K32GetProcessMemoryInfo.restype = wintypes.BOOL
+        k32.K32GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.POINTER(PMC), wintypes.DWORD]
+        c = PMC()
+        c.cb = ctypes.sizeof(PMC)
+        if not k32.K32GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb):
+            return "?" if detail else 0
+        mb = 1024 * 1024
+        if detail:
+            return f"in use {c.WorkingSetSize // mb} MB, reserved {c.PrivateUsage // mb} MB"
+        return int(c.PrivateUsage // mb)
     except Exception:
-        return 0
+        return "?" if detail else 0
 
 
 def is_store_app() -> bool:

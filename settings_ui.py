@@ -68,6 +68,8 @@ def open_settings(root, cfg: dict, on_save):
     if not is_store_app():             # Store version: the Store updates the app
         check(g, 11, "check_updates", "Check for new versions once a day (asks GitHub for the latest version "
                                       "number only — nothing about you or your dictation is sent)")
+    check(g, 13, "free_memory_when_idle", "Free memory when I'm not dictating (after 10 minutes): uses about "
+                                          "0.5 GB instead of 4 GB. The next dictation takes a few seconds to start.")
     hist = ttk.Frame(g); hist.grid(row=8, column=0, columnspan=2, sticky="we", **pad)
     hvar = tk.BooleanVar(value=bool(cfg["save_history"])); v["save_history"] = (hvar, None)
     ttk.Checkbutton(hist, text="Save a history of everything I dictate (a text file, not encrypted)",
