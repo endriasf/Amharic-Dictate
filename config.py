@@ -143,6 +143,27 @@ def log_error(msg: str):
         f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + msg + "\n")
 
 
+def memory_mb() -> int:
+    """This app's own memory use in MB, as Task Manager shows it (0 if it can't be read)."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        class PMC(ctypes.Structure):
+            _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD)] + [
+                (n, ctypes.c_size_t) for n in ("PeakWorkingSetSize", "WorkingSetSize", "QuotaPeakPagedPoolUsage",
+                                               "QuotaPagedPoolUsage", "QuotaPeakNonPagedPoolUsage",
+                                               "QuotaNonPagedPoolUsage", "PagefileUsage", "PeakPagefileUsage",
+                                               "PrivateUsage")]
+        c = PMC(); c.cb = ctypes.sizeof(PMC)
+        k32 = ctypes.windll.kernel32
+        k32.GetCurrentProcess.restype = wintypes.HANDLE
+        ctypes.windll.psapi.GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb)
+        return int(c.PrivateUsage // (1024 * 1024))
+    except Exception:
+        return 0
+
+
 def is_store_app() -> bool:
     """True when running as the Microsoft Store (MSIX) version: the Store handles updates and start-up."""
     try:
