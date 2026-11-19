@@ -45,3 +45,7 @@ python train_amharic_ctc.py --sources waxal fleurs --output_dir am-w2vbert
   but users will always see the standardized spelling. Leave it off unless you want that.
 - Licenses: keep `final/README.md` with the model. Before adding any other dataset, check that its
   license allows commercial use.
+
+## Making the model smaller (for a phone)
+See [README_COMPRESSION.md](README_COMPRESSION.md): `compression_eval.py` measures how much accuracy the
+model keeps in fp16, int8 and 4/6-bit palette formats.
