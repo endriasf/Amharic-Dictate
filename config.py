@@ -149,16 +149,21 @@ def memory_mb() -> int:
         import ctypes
         from ctypes import wintypes
 
-        class PMC(ctypes.Structure):
+        class PMC(ctypes.Structure):          # PROCESS_MEMORY_COUNTERS_EX
             _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD)] + [
                 (n, ctypes.c_size_t) for n in ("PeakWorkingSetSize", "WorkingSetSize", "QuotaPeakPagedPoolUsage",
                                                "QuotaPagedPoolUsage", "QuotaPeakNonPagedPoolUsage",
                                                "QuotaNonPagedPoolUsage", "PagefileUsage", "PeakPagefileUsage",
                                                "PrivateUsage")]
-        c = PMC(); c.cb = ctypes.sizeof(PMC)
-        k32 = ctypes.windll.kernel32
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
         k32.GetCurrentProcess.restype = wintypes.HANDLE
-        ctypes.windll.psapi.GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb)
+        k32.GetCurrentProcess.argtypes = []
+        k32.K32GetProcessMemoryInfo.restype = wintypes.BOOL
+        k32.K32GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.POINTER(PMC), wintypes.DWORD]
+        c = PMC()
+        c.cb = ctypes.sizeof(PMC)
+        if not k32.K32GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb):
+            return 0
         return int(c.PrivateUsage // (1024 * 1024))
     except Exception:
         return 0
