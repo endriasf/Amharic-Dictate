@@ -56,11 +56,12 @@ err6 = (ce.palettize(w, 6) - w).pow(2).mean().item()
 err8 = (q - w).pow(2).mean().item()
 check(f"error shrinks with bits (pal4 {err4:.2e} > pal6 {err6:.2e} > int8 {err8:.2e})", err4 > err6 > err8)
 check("grouped palettes are at least as accurate", (pg - w).pow(2).mean().item() <= err4 * 1.01)
-try:
-    ce.palettize(w, 4, group_size=10)
-    check("bad group size rejected", False)
-except ValueError:
-    check("bad group size rejected", True)
+odd = torch.randn(300, 48)                  # e.g. an output layer whose rows don't divide by 32
+po = ce.palettize(odd, 4, group_size=32)
+check("pal4 grouped, uneven rows: shape kept", po.shape == odd.shape)
+check("pal4 grouped, uneven rows: <= 16 values per group incl. the short last one",
+      all(len(torch.unique(po[i:i + 32])) <= 16 for i in range(0, 300, 32)))
+check("palette count rounds up for the short group", ce.palette_groups((300, 48), 32) == 10)
 
 
 # ---- apply_variant on a tiny model: variants never stack, only Linear weights compressed
@@ -151,7 +152,7 @@ else:
     ce.load_test_clips = fake_clips
     out = tmp / "out"
     sys.argv = ["compression_eval.py", "--model", str(model_dir), "--max-clips", "2", "--device", "cpu",
-                "--out", str(out)]
+                "--out", str(out), "--palette-group-size", "8", "--variants", *ce.ALL_VARIANTS]
     ce.main()
     md = (out / "compression_summary.md").read_text(encoding="utf-8")
     import csv

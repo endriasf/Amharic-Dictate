@@ -15,7 +15,7 @@ app, where the model has to be much smaller than 2.4 GB.
 | `int8` | The big layers stored as 8-bit whole numbers | ~0.70 GB |
 | `pal6` | The big layers use only 64 distinct values each (6 bits) | ~0.57 GB |
 | `pal4` | The big layers use only 16 distinct values each (4 bits) | ~0.44 GB |
-| `int8-dynamic` | The 8-bit version the Windows app already uses for live preview | measured |
+| `int8-dynamic` | The 8-bit version the Windows app already uses for live preview (only when asked for, see below) | measured |
 
 "The big layers" are the `nn.Linear` layers: 85 % of the weights. The rest (convolutions,
 norms) is kept in fp16. Add `--include-conv` to compress the convolutions as well, as Apple's
@@ -48,14 +48,22 @@ from huggingface_hub import notebook_login; notebook_login()
 !python compression_eval.py --max-clips 500
 ```
 
-5. When that works, the full run (takes a few hours, mostly the `int8-dynamic` row,
-   which only runs on the CPU):
+5. When that works, the full run (a few hours):
 
 ```python
 !python compression_eval.py
 ```
 
-   To skip the slow CPU row: `!python compression_eval.py --variants fp32 fp16 int8 pal6 pal4`
+   The app's own `int8-dynamic` version only runs on the CPU and takes ~4 hours per 1000 clips
+   on Colab, so it is left out unless you name it:
+   `!python compression_eval.py --max-clips 200 --variants fp32 int8-dynamic`
+
+6. If the 4- and 6-bit rows lose a lot, try one palette per block of 32 output channels
+   (still small, usually much more accurate):
+
+```python
+!python compression_eval.py --max-clips 500 --variants fp32 pal6 pal4 --palette-group-size 32
+```
 
 Results land in `compression_results/` (download them from the Colab file panel).
 
@@ -90,5 +98,7 @@ Notes:
 - The `fp32` numbers can differ slightly from the published 24.4 % WER (clip filtering and
   text clean-up differ a little). Compare versions against the `fp32` row, not the model card.
 - `--palette-group-size 32` gives each block of 32 output channels its own palette (Core ML
-  "per grouped channel"); a little bigger, usually more accurate at 4 bits.
+  "per grouped channel"); a few MB bigger, usually much more accurate at 4 and 6 bits.
+- The results files are rewritten after every version finishes, so you can stop a long run
+  (■ in Colab) and keep the rows that are done.
 - Model licence: CC BY-SA 4.0 — a shipped compressed copy keeps the same licence and attribution.
