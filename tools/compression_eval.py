@@ -12,7 +12,8 @@ the WAXAL Amharic test set and the FLEURS Amharic test set:
   pal6          6-bit palettisation: k-means, 64 values per Linear layer
   pal4          4-bit palettisation: k-means, 16 values per Linear layer
   int8-dynamic  torch.quantization.quantize_dynamic, exactly as the Windows app's
-                live preview does it (runs on the CPU, so it is the slowest one)
+                live preview does it. CPU only and very slow (~4 h per 1000 clips on
+                Colab), so it only runs when named: --variants fp32 int8-dynamic
 
 fp16 / int8 / pal6 / pal4 are simulated: each weight is replaced by the value it would
 have in that format and the model still runs in float32. That isolates the accuracy
@@ -33,7 +34,7 @@ GOOGLE COLAB  (Runtime > Change runtime type > T4 GPU)
   %cd Amharic-Dictate/tools
   !pip install -q "transformers>=4.46" "datasets[audio]" soundfile librosa
   from huggingface_hub import notebook_login; notebook_login()   # if a dataset asks for it
-  !python compression_eval.py --max-clips 500                     # quick run (~30-60 min)
+  !python compression_eval.py --max-clips 500                     # quick run (~1 h on a T4)
   !python compression_eval.py                                     # full test sets
 
 WINDOWS PC
@@ -62,6 +63,7 @@ from train_amharic_ctc import SR, decode_audio, load_source  # noqa: E402
 
 DEFAULT_MODEL = "Abittee/amharic-speech-to-text-efa-v1"
 ALL_VARIANTS = ["fp32", "fp16", "int8", "pal6", "pal4", "int8-dynamic"]
+DEFAULT_VARIANTS = ALL_VARIANTS[:-1]   # int8-dynamic is CPU-only: ~4 h per 1000 clips on Colab, so opt-in
 DATASETS = {"waxal": "WAXAL amh_asr test", "fleurs": "FLEURS am_et test"}
 MAX_WER_LOSS_PP = 0.5     # "no worse" threshold used for the recommendation
 
@@ -124,16 +126,21 @@ def palettize(w, n_bits: int, group_size: int = 0, iters: int = 30):
     The palette (lookup table) is stored in fp16, as in Core ML."""
     rows = w.shape[0]
     x = w.reshape(rows, -1)
-    if group_size and group_size < rows:
-        if rows % group_size:
-            raise ValueError(f"{rows} output channels not divisible by group size {group_size}")
-        x = x.reshape(rows // group_size, -1)
-    else:
-        x = x.reshape(1, -1)
-    x = x.contiguous()
-    c, labels = kmeans_1d(x, 2 ** n_bits, iters=iters)
-    c = round_fp16(c)
-    return c.gather(1, labels).reshape(w.shape)
+    k = 2 ** n_bits
+    if not group_size or group_size >= rows:
+        return _palettize_groups(x.reshape(1, -1), k, iters).reshape(w.shape)
+    full = rows // group_size * group_size          # e.g. a 300-row output layer with groups of 32:
+    parts = [_palettize_groups(x[:full].reshape(full // group_size, -1), k, iters).reshape(full, -1)]
+    if full < rows:                                 # ...9 groups of 32, then one group of the last 12 rows
+        parts.append(_palettize_groups(x[full:].reshape(1, -1), k, iters).reshape(rows - full, -1))
+    import torch
+    return torch.cat(parts).reshape(w.shape)
+
+
+def _palettize_groups(x, k, iters):
+    """x: (groups, values) -> same shape, each group replaced by its own k fp16 palette values."""
+    c, labels = kmeans_1d(x.contiguous(), k, iters=iters)
+    return round_fp16(c).gather(1, labels)
 
 
 # --------------------------------------------------------------------------
@@ -150,7 +157,7 @@ def linear_weight_names(model, include_conv: bool = False):
 
 
 def palette_groups(shape, group_size):
-    return shape[0] // group_size if group_size and group_size < shape[0] else 1
+    return math.ceil(shape[0] / group_size) if group_size and group_size < shape[0] else 1
 
 
 def transform_for(variant: str, name: str, linear_names, group_size: int, iters: int):
@@ -318,7 +325,8 @@ def main():
     ap.add_argument("--max-clips", type=int, default=0,
                     help="use only the first N test clips of each dataset (0 = full test sets)")
     ap.add_argument("--datasets", nargs="+", default=list(DATASETS), choices=list(DATASETS))
-    ap.add_argument("--variants", nargs="+", default=ALL_VARIANTS, choices=ALL_VARIANTS)
+    ap.add_argument("--variants", nargs="+", default=DEFAULT_VARIANTS, choices=ALL_VARIANTS,
+                    help="default: all but int8-dynamic (add it explicitly; it runs on the CPU and is very slow)")
     ap.add_argument("--palette-group-size", type=int, default=0,
                     help="output channels per k-means palette (0 = one palette per layer, the default)")
     ap.add_argument("--include-conv", action="store_true",
@@ -376,11 +384,18 @@ def main():
             per_clip_rows = [r for r in per_clip_rows if r["variant"] != variant]
             continue
         rows.append(row)
+        report(rows, failed, data, args, per_clip_rows, final=False)   # safe to stop the run from here on
         if variant == "int8-dynamic":
             break                                    # model was quantised in place: always last
     if not rows:
         sys.exit("Every variant failed.")
 
+    report(rows, failed, data, args, per_clip_rows, final=True)
+
+
+def report(rows, failed, data, args, per_clip_rows, final):
+    """Write the summary + per-clip files (after every variant, so an interrupted run keeps
+    what it finished); print the table at the end."""
     # ---- deltas vs baseline
     base_row = next((r for r in rows if r["variant"] == "fp32"), None)
     for r in rows:
@@ -439,6 +454,9 @@ def main():
         md += [f"Failed (see the log): {', '.join(failed)}", ""]
     (args.out / "compression_summary.md").write_text("\n".join(md), encoding="utf-8")
 
+    if not final:
+        print(f"  (results so far saved to {args.out / 'compression_summary.md'})")
+        return
     widths = [max(len(str(x)) for x in col) for col in zip(head, *table)]
     print("\n" + "=" * (sum(widths) + 2 * len(widths)))
     print(f"{args.model}  ({clips_note})")
