@@ -25,7 +25,8 @@ print(open(os.path.join(out, "progress.json"), encoding="utf-8").read())
 print("adapter MB", round(os.path.getsize(adapter) / 1e6, 1))
 import voiceprofile, torch
 from transformers import AutoModelForCTC
-m = AutoModelForCTC.from_pretrained(base)
+from int8model import load_ctc_model  # noqa: E402
+m = load_ctc_model(base)
 print("signature", voiceprofile.model_signature(m), "lora layers", len(voiceprofile.target_linears(m)))
 tr = Transcriber(base, "cpu", False, adapter=adapter)
 print("full merge problem:", repr(tr.profile_problem))

@@ -176,12 +176,13 @@ class Transcriber:
         """Load the speech model's weights (and merge the voice profile). ~2 s once the engine is running."""
         import gc
         torch = self.torch
-        from transformers import AutoModelForCTC
+        from int8model import is_int8, load_ctc_model
         from config import log_error, memory_mb
         model_path, quantize_cpu, adapter, device = self._model_path, self._quantize, self._adapter, self.device
         log_error(f"Memory, before loading the model: {memory_mb(True)}")
-        model = AutoModelForCTC.from_pretrained(model_path).eval()
-        log_error(f"Memory, model loaded ({'int8' if quantize_cpu else 'full'}): {memory_mb(True)}")
+        model = load_ctc_model(model_path).eval()       # also expands the installer's 8-bit weights
+        log_error(f"Memory, model loaded ({'int8' if quantize_cpu else 'full'}"
+                  f"{', from 8-bit file' if is_int8(model_path) else ''}): {memory_mb(True)}")
         self.profile_problem = ""
         if adapter is not None:                    # personal voice profile: merged into the weights
             from voiceprofile import merge_adapter

@@ -1515,7 +1515,7 @@ def selftest(out_path: str) -> int:
     lines, code = [], 0
     for mod in ("numpy", "torch", "sounddevice", "keyboard", "pyperclip", "pystray", "PIL",
                 "huggingface_hub", "engine", "textproc", "settings_ui", "lmdecode", "voiceprofile",
-                "voice_training", "train_local", "learning", "wordsync", "theme", "cmdspot", "updater", "diagnose",
+                "voice_training", "train_local", "learning", "wordsync", "theme", "cmdspot", "updater", "diagnose", "int8model",
                 "win32com.client", "pythoncom"):
         try:
             __import__(mod)
@@ -1539,7 +1539,8 @@ def selftest(out_path: str) -> int:
             tr = Transcriber(bundled, "cpu", False, use_lm=True)
             lines.append(f"--   model load {_t0.time() - t_load:.1f}s")
             tr(np.zeros(16000, dtype=np.float32))
-            lines.append(f"OK   built-in model ({bundled})")
+            from int8model import is_int8
+            lines.append(f"OK   built-in model ({bundled}, {'8-bit' if is_int8(bundled) else 'full/half'} weights)")
             import time as _t
             t0 = _t.time()
             try:                                  # optional: without it, the live preview uses the main model
