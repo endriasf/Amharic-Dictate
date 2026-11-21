@@ -6,7 +6,7 @@ from pathlib import Path
 
 APP_NAME = "AmharicDictate"        # internal id: settings folder, start-up entry, single-instance lock
 APP_TITLE = "Amharic Dictate"      # what people see in windows, menus and messages
-APP_VERSION = "2.4.2"
+APP_VERSION = "2.5.0"
 
 BUNDLED_MODEL = "bundled"     # the speech model packaged inside the installer
 

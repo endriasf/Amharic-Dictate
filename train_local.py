@@ -168,12 +168,13 @@ def main(argv=None):
     try:
         prog.update(0.0, "Loading the speech model…")
         import torch
-        from transformers import AutoModelForCTC, AutoProcessor
+        from transformers import AutoProcessor
         torch.set_num_threads(max(1, (os.cpu_count() or 2) - 1))
         torch.manual_seed(0)
 
         processor = AutoProcessor.from_pretrained(args.base)
-        model = AutoModelForCTC.from_pretrained(args.base)
+        from int8model import load_ctc_model
+        model = load_ctc_model(args.base)            # also reads the installer's 8-bit weights
         vocab = set(processor.tokenizer.get_vocab())
 
         # ---- data
